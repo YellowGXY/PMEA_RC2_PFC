@@ -4,7 +4,7 @@
 #include "funciones.h"
 
 // Inicializa el sistema con datos de muestreo y guarda en datos_hist.dat
-void inicializarSistema(Sistema *s) {
+void inicializarSistema(struct Sistema *s) {
     static const char *nombres[5] = {"Centro", "Norte", "Sur", "Este", "Oeste"};
     float datos[5][7] = {
         {0.04, 0.02, 0.03, 35.2, 22.5, 3.2, 60.0},
@@ -30,25 +30,25 @@ void inicializarSistema(Sistema *s) {
 }
 
 // Carga datos historicos desde archivo binario
-int cargarDatosHistoricos(Sistema *s, const char *ruta) {
+int cargarDatosHistoricos(struct Sistema *s, const char *ruta) {
     FILE *f = fopen(ruta, "rb");
     if (!f) return 0;
-    fread(s, sizeof(Sistema), 1, f);
+    fread(s, sizeof(struct Sistema), 1, f);
     fclose(f);
     return 1;
 }
 
 // Guarda datos en archivo binario
-int guardarDatos(Sistema *s, const char *ruta) {
+int guardarDatos(struct Sistema *s, const char *ruta) {
     FILE *f = fopen(ruta, "wb");
     if (!f) return 0;
-    fwrite(s, sizeof(Sistema), 1, f);
+    fwrite(s, sizeof(struct Sistema), 1, f);
     fclose(f);
     return 1;
 }
 
 // Calcula promedios de contaminantes para todas las zonas
-void calcularPromedios(Sistema *s, float promedios[]) {
+void calcularPromedios(struct Sistema *s, float promedios[]) {
     float sumas[4] = {0};
     for (int i = 0; i < s->numZonas; i++) {
         sumas[0] += s->zonas[i].co2;
@@ -61,7 +61,7 @@ void calcularPromedios(Sistema *s, float promedios[]) {
 }
 
 // Predice contaminacion para 24h futuras (simple: +5%)
-void predecirContaminacion(Sistema *s, float prediccion[]) {
+void predecirContaminacion(struct Sistema *s, float prediccion[]) {
     for (int i = 0; i < s->numZonas; i++) {
         prediccion[i] = s->zonas[i].pm25 * 1.05f;
     }
@@ -74,7 +74,7 @@ void predecirContaminacion(Sistema *s, float prediccion[]) {
 }
 
 // Emite alertas si se superan limites OMS
-void emitirAlertas(Sistema *s, float prediccion[], char alertas[][64], int *nAlertas) {
+void emitirAlertas(struct Sistema *s, float prediccion[], char alertas[][64], int *nAlertas) {
     *nAlertas = 0;
     for (int i = 0; i < s->numZonas; i++) {
         if (prediccion[i] > 35.0f) {
@@ -107,7 +107,7 @@ void generarRecomendaciones(char alertas[][64], int nAlertas) {
 }
 
 // Muestra tabla de zonas y contaminantes
-void mostrarTablaZonas(Sistema *s) {
+void mostrarTablaZonas(struct Sistema *s) {
     printf("+--------+-------+-------+-------+-------+\n");
     printf("| Zona   | CO2   | SO2   | NO2   | PM2.5 |\n");
     printf("+--------+-------+-------+-------+-------+\n");
@@ -157,38 +157,39 @@ int confirmar(const char *mensaje) {
 
 // Ayuda contextual para menus
 void ayudaMenu(const char *menuNombre) {
-    printf("Ayuda para menu %s:\n", menuNombre);
-    printf("Ingrese el numero de la opcion deseada. Presione 'c' para cancelar o volver.\n");
-    // Extra: ayuda extendida
+    printf("\nAyuda para menu %s:\n", menuNombre);
+    printf("Ingrese el numero de la opcion deseada.\n");
+    printf("Presione 'c' para cancelar o volver.\n\n");
     printf("Opciones principales:\n");
-    printf("1: Inicializa el sistema con datos de ejemplo.\n");
-    printf("2: Carga datos historicos desde archivo.\n");
-    printf("3: Muestra tabla y promedios de contaminantes.\n");
-    printf("4: Predice contaminacion para 24h futuras.\n");
-    printf("5: Muestra alertas si hay contaminantes fuera de norma.\n");
-    printf("6: Muestra recomendaciones de mitigacion.\n");
-    printf("7: Permite ingresar datos manualmente.\n");
-    printf("8: Exporta alertas y recomendaciones a archivo.\n");
+    printf(" 1: Inicializa el sistema con datos de ejemplo.\n");
+    printf(" 2: Carga datos historicos desde archivo.\n");
+    printf(" 3: Muestra tabla y promedios de contaminantes.\n");
+    printf(" 4: Predice contaminacion para 24h futuras.\n");
+    printf(" 5: Muestra alertas si hay contaminantes fuera de norma.\n");
+    printf(" 6: Muestra recomendaciones de mitigacion.\n");
+    printf(" 7: Permite ingresar datos manualmente.\n");
+    printf(" 8: Exporta alertas y recomendaciones a archivo.\n");
     printf("10: Muestra historial de zonas.\n");
     printf("11: Muestra detalle de una zona.\n");
+    printf("12: Buscar zona por nombre.\n\n");
 }
 
 // Muestra el historial de datos de todas las zonas (si existe el archivo)
 void mostrarHistorialZonas() {
-    Sistema s;
+    struct Sistema s;
     FILE *f = fopen("datos_hist.dat", "rb");
     if (!f) {
         printf("No hay historial disponible.\n");
         return;
     }
-    fread(&s, sizeof(Sistema), 1, f);
+    fread(&s, sizeof(struct Sistema), 1, f);
     fclose(f);
     printf("Historial de zonas:\n");
     mostrarTablaZonas(&s);
 }
 
 // Muestra detalles de una zona específica
-void mostrarDetalleZona(Sistema *s) {
+void mostrarDetalleZona(struct Sistema *s) {
     if (s->numZonas == 0) {
         printf("No hay zonas cargadas.\n");
         return;
@@ -199,7 +200,7 @@ void mostrarDetalleZona(Sistema *s) {
     }
     int idx = leerEntero("Opcion: ", 0, s->numZonas-1, 1);
     if (idx < 0) return;
-    Zona *z = &s->zonas[idx];
+    struct Zona *z = &s->zonas[idx];
     printf("+--------------------------------------+\n");
     printf("| Detalle de zona: %-18s |\n", z->nombre);
     printf("+--------------------------------------+\n");
@@ -214,7 +215,7 @@ void mostrarDetalleZona(Sistema *s) {
 }
 
 // Extra: Permite buscar zona por nombre y mostrar sus datos
-void buscarZonaPorNombre(Sistema *s) {
+void buscarZonaPorNombre(struct Sistema *s) {
     if (s->numZonas == 0) {
         printf("No hay zonas cargadas.\n");
         return;
@@ -226,10 +227,10 @@ void buscarZonaPorNombre(Sistema *s) {
     nombre[strcspn(nombre, "\n")] = 0;
     for (int i = 0; i < s->numZonas; i++) {
         if (strcasecmp(nombre, s->zonas[i].nombre) == 0) {
+            struct Zona *z = &s->zonas[i];
             printf("Zona encontrada:\n");
             printf("CO2: %.3f, SO2: %.3f, NO2: %.3f, PM2.5: %.1f, Temp: %.1f, Viento: %.1f, Humedad: %.1f\n",
-                s->zonas[i].co2, s->zonas[i].so2, s->zonas[i].no2, s->zonas[i].pm25,
-                s->zonas[i].temperatura, s->zonas[i].viento, s->zonas[i].humedad);
+                z->co2, z->so2, z->no2, z->pm25, z->temperatura, z->viento, z->humedad);
             return;
         }
     }
@@ -237,7 +238,7 @@ void buscarZonaPorNombre(Sistema *s) {
 }
 
 // Maneja la opcion seleccionada del menu principal
-void manejarOpcion(int opcion, Sistema *s) {
+void manejarOpcion(int opcion, struct Sistema *s) {
     float promedios[4], prediccion[MAX_ZONAS];
     char alertas[MAX_ALERTAS][64];
     int nAlertas;

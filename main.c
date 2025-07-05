@@ -4,7 +4,7 @@
 #include "funciones.h"
 
 int main() {
-    Sistema sistema = {0};
+    struct Sistema sistema = {0};
     int opcion;
     char buf[16];
 
