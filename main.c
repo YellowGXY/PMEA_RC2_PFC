@@ -20,7 +20,9 @@ int main() {
     while (1) {
         mostrarMenuPrincipal();
         printf("Seleccione una opcion: ");
-        if (!fgets(buf, sizeof(buf), stdin)) continue;
+        if (!fgets(buf, sizeof(buf), stdin)) {
+            continue;
+        }
         if (buf[0] == 'h' || buf[0] == 'H') {
             ayudaMenu("Principal");
             continue;

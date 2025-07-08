@@ -5,7 +5,7 @@
 
 // Inicializa el sistema con datos de muestreo y guarda en datos_hist.dat
 void inicializarSistema(struct Sistema *s) {
-    static const char *nombres[5] = {"Centro", "Norte", "Sur", "Este", "Oeste"};
+    char *nombres[5] = {"Centro", "Norte", "Sur", "Este", "Oeste"};
     float datos[5][7] = {
         {0.04, 0.02, 0.03, 35.2, 22.5, 3.2, 60.0},
         {0.05, 0.01, 0.04, 40.1, 23.0, 2.8, 55.0},
@@ -30,7 +30,7 @@ void inicializarSistema(struct Sistema *s) {
 }
 
 // Carga datos historicos desde archivo binario
-int cargarDatosHistoricos(struct Sistema *s, const char *ruta) {
+int cargarDatosHistoricos(struct Sistema *s, char *ruta) {
     FILE *f = fopen(ruta, "rb");
     if (!f) return 0;
     fread(s, sizeof(struct Sistema), 1, f);
@@ -39,7 +39,7 @@ int cargarDatosHistoricos(struct Sistema *s, const char *ruta) {
 }
 
 // Guarda datos en archivo binario
-int guardarDatos(struct Sistema *s, const char *ruta) {
+int guardarDatos(struct Sistema *s, char *ruta) {
     FILE *f = fopen(ruta, "wb");
     if (!f) return 0;
     fwrite(s, sizeof(struct Sistema), 1, f);
@@ -124,7 +124,7 @@ void mostrarTablaZonas(struct Sistema *s) {
 }
 
 // Lee un entero validado, permite cancelar si allowCancel=1
-int leerEntero(const char *prompt, int min, int max, int allowCancel) {
+int leerEntero(char *prompt, int min, int max, int allowCancel) {
     char buf[32];
     int val;
     while (1) {
@@ -138,7 +138,7 @@ int leerEntero(const char *prompt, int min, int max, int allowCancel) {
 }
 
 // Lee un float validado, permite cancelar si allowCancel=1
-float leerFloat(const char *prompt, float min, float max, int allowCancel) {
+float leerFloat(char *prompt, float min, float max, int allowCancel) {
     char buf[32];
     float val;
     while (1) {
@@ -152,7 +152,7 @@ float leerFloat(const char *prompt, float min, float max, int allowCancel) {
 }
 
 // Confirmacion simple (si/no)
-int confirmar(const char *mensaje) {
+int confirmar(char *mensaje) {
     char buf[8];
     printf("%s (s/n): ", mensaje);
     if (fgets(buf, sizeof(buf), stdin) == NULL) return 0;
@@ -160,7 +160,7 @@ int confirmar(const char *mensaje) {
 }
 
 // Ayuda contextual para menus
-void ayudaMenu(const char *menuNombre) {
+void ayudaMenu(char *menuNombre) {
     printf("\nAyuda para menu %s:\n", menuNombre);
     printf("Ingrese el numero de la opcion deseada.\n");
     printf("Presione 'c' para cancelar o volver.\n\n");
@@ -230,7 +230,19 @@ void buscarZonaPorNombre(struct Sistema *s) {
     if (nombre[0] == 'c' || nombre[0] == 'C') return;
     nombre[strcspn(nombre, "\n")] = 0;
     for (int i = 0; i < s->numZonas; i++) {
-        if (strcasecmp(nombre, s->zonas[i].nombre) == 0) {
+        int iguales = 1;
+        for (int j = 0; j < 32; j++) {
+            char a = nombre[j];
+            char b = s->zonas[i].nombre[j];
+            if (a >= 'A' && a <= 'Z') a = a + ('a' - 'A');
+            if (b >= 'A' && b <= 'Z') b = b + ('a' - 'A');
+            if (a != b) {
+                iguales = 0;
+                break;
+            }
+            if (a == 0 && b == 0) break;
+        }
+        if (iguales) {
             struct Zona *z = &s->zonas[i];
             printf("Zona encontrada:\n");
             printf("CO2: %.3f, SO2: %.3f, NO2: %.3f, PM2.5: %.1f, Temp: %.1f, Viento: %.1f, Humedad: %.1f\n",
@@ -242,7 +254,7 @@ void buscarZonaPorNombre(struct Sistema *s) {
 }
 
 // Calcula el Índice de Calidad del Aire (ICA) basado en PM2.5
-const char* calcularICA(float pm25) {
+char* calcularICA(float pm25) {
     if (pm25 <= 12.0f) return "Bueno";
     else if (pm25 <= 35.0f) return "Moderado";
     else if (pm25 <= 55.0f) return "No saludable";
@@ -250,7 +262,7 @@ const char* calcularICA(float pm25) {
 }
 
 // Muestra alerta según nivel de ICA con colores
-void mostrar_alerta(float pm25, const char* zona) {
+void mostrar_alerta(float pm25, char* zona) {
     // Definición de colores ANSI para la terminal
     #define ANSI_COLOR_GREEN   "\x1b[32m"
     #define ANSI_COLOR_YELLOW  "\x1b[33m"
@@ -258,7 +270,7 @@ void mostrar_alerta(float pm25, const char* zona) {
     #define ANSI_COLOR_MAGENTA "\x1b[35m"
     #define ANSI_COLOR_RESET   "\x1b[0m"
 
-    const char* nivel = calcularICA(pm25);
+    char* nivel = calcularICA(pm25);
     if (strcmp(nivel, "Bueno") == 0)
         printf("Zona %s: " ANSI_COLOR_GREEN "%s" ANSI_COLOR_RESET " Aire saludable.\n", zona, nivel);
     else if (strcmp(nivel, "Moderado") == 0)
