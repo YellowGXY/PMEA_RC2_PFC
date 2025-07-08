@@ -60,12 +60,16 @@ void calcularPromedios(struct Sistema *s, float promedios[]) {
         promedios[j] = sumas[j] / s->numZonas;
 }
 
-// Predice contaminacion para 24h futuras (simple: +5%)
+// Predice contaminacion para 24h futuras (mejora: mezcla ponderada con promedio global)
 void predecirContaminacion(struct Sistema *s, float prediccion[]) {
+    float promedios[4];
+    calcularPromedios(s, promedios);
+    float pm_promedio = promedios[3]; // promedio de PM2.5
     for (int i = 0; i < s->numZonas; i++) {
-        prediccion[i] = s->zonas[i].pm25 * 1.05f;
+        // 70% valor actual + 30% promedio global
+        prediccion[i] = s->zonas[i].pm25 * 0.7f + pm_promedio * 0.3f;
     }
-    // Extra: guarda prediccion en archivo datos_pred.dat
+    // Guarda prediccion en archivo binario datos_pred.dat
     FILE *f = fopen("datos_pred.dat", "wb");
     if (f) {
         fwrite(prediccion, sizeof(float), s->numZonas, f);
@@ -237,6 +241,45 @@ void buscarZonaPorNombre(struct Sistema *s) {
     printf("Zona no encontrada.\n");
 }
 
+// Calcula el Índice de Calidad del Aire (ICA) basado en PM2.5
+const char* calcularICA(float pm25) {
+    if (pm25 <= 12.0f) return "Bueno";
+    else if (pm25 <= 35.0f) return "Moderado";
+    else if (pm25 <= 55.0f) return "No saludable";
+    else return "Peligroso";
+}
+
+// Muestra alerta según nivel de ICA con colores
+void mostrar_alerta(float pm25, const char* zona) {
+    // Definición de colores ANSI para la terminal
+    #define ANSI_COLOR_GREEN   "\x1b[32m"
+    #define ANSI_COLOR_YELLOW  "\x1b[33m"
+    #define ANSI_COLOR_RED     "\x1b[31m"
+    #define ANSI_COLOR_MAGENTA "\x1b[35m"
+    #define ANSI_COLOR_RESET   "\x1b[0m"
+
+    const char* nivel = calcularICA(pm25);
+    if (strcmp(nivel, "Bueno") == 0)
+        printf("Zona %s: " ANSI_COLOR_GREEN "%s" ANSI_COLOR_RESET " Aire saludable.\n", zona, nivel);
+    else if (strcmp(nivel, "Moderado") == 0)
+        printf("Zona %s: " ANSI_COLOR_YELLOW "%s" ANSI_COLOR_RESET " Evitar esfuerzo fisico prolongado.\n", zona, nivel);
+    else if (strcmp(nivel, "No saludable") == 0)
+        printf("Zona %s: " ANSI_COLOR_RED "%s" ANSI_COLOR_RESET " Riesgo para grupos sensibles.\n", zona, nivel);
+    else
+        printf("Zona %s: " ANSI_COLOR_MAGENTA "%s" ANSI_COLOR_RESET " Evitar salir, usar mascarilla.\n", zona, nivel);
+}
+
+// Registra predicciones en archivo de texto delimitado por punto y coma
+void registrarPredicciones(struct Sistema *s, float prediccion[]) {
+    FILE *f = fopen("predicciones.txt", "a");
+    if (!f) return;
+    for (int i = 0; i < s->numZonas; i++) {
+        const char* nivel = calcularICA(prediccion[i]);
+        fprintf(f, "%s;%.1f;%.1f;%s\n", s->zonas[i].nombre, s->zonas[i].pm25, prediccion[i], nivel);
+    }
+    fclose(f);
+}
+
 // Maneja la opcion seleccionada del menu principal
 void manejarOpcion(int opcion, struct Sistema *s) {
     float promedios[4], prediccion[MAX_ZONAS];
@@ -267,20 +310,26 @@ void manejarOpcion(int opcion, struct Sistema *s) {
             printf("Prediccion PM2.5 para 24h futuras:\n");
             for (int i = 0; i < s->numZonas; i++)
                 printf("%s: %.1f ug/m3\n", s->zonas[i].nombre, prediccion[i]);
+            // Registrar predicciones en texto
+            registrarPredicciones(s, prediccion);
+            printf("Predicciones registradas en predicciones.txt\n");
             break;
         case 5:
             predecirContaminacion(s, prediccion);
-            emitirAlertas(s, prediccion, alertas, &nAlertas);
-            if (nAlertas == 0)
-                printf("No hay alertas.\n");
-            else
-                for (int i = 0; i < nAlertas; i++)
-                    printf("%s\n", alertas[i]);
+            printf("Alertas y niveles ICA por zona:\n");
+            for (int i = 0; i < s->numZonas; i++) {
+                mostrar_alerta(prediccion[i], s->zonas[i].nombre);
+            }
+            // Registrar predicciones en texto
+            registrarPredicciones(s, prediccion);
             break;
         case 6:
             predecirContaminacion(s, prediccion);
             emitirAlertas(s, prediccion, alertas, &nAlertas);
             generarRecomendaciones(alertas, nAlertas);
+            // Registrar predicciones en texto
+            registrarPredicciones(s, prediccion);
+            printf("Predicciones registradas en predicciones.txt\n");
             break;
         case 7: {
             if (s->numZonas == 0) {
