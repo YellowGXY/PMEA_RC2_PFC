@@ -1,41 +1,61 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include "funciones.h"
 
 int main() {
-    struct Sistema sistema = {0};
-    int opcion;
-    char buf[16];
+    Zona zonas[MAX_ZONAS];
+    int numZonas = MAX_ZONAS;
+    int opcion, zonaSel, semanaSel;
 
-    // Si no existe datos_hist.dat, inicializar con datos de muestreo
-    FILE *f = fopen("datos_hist.dat", "rb");
-    if (!f) {
-        inicializarSistema(&sistema);
-    } else {
-        fclose(f);
-        cargarDatosHistoricos(&sistema, "datos_hist.dat");
-    }
+    inicializarZonas(zonas, &numZonas);
 
     while (1) {
-        mostrarMenuPrincipal();
-        printf("Seleccione una opcion: ");
-        if (!fgets(buf, sizeof(buf), stdin)) {
-            continue;
-        }
-        if (buf[0] == 'h' || buf[0] == 'H') {
-            ayudaMenu("Principal");
-            continue;
-        }
-        if (sscanf(buf, "%d", &opcion) != 1) {
-            printf("Entrada invalida.\n");
-            continue;
-        }
-        if (opcion == 9) {
-            printf("Saliendo del sistema.\n");
+        printf("\n--- MENU PRINCIPAL ---\n");
+        printf("1. Configurar zonas y umbrales\n");
+        printf("2. Generar datos aleatorios para una semana\n");
+        printf("3. Ingresar datos manualmente\n");
+        printf("4. Reporte semanal\n");
+        printf("5. Guardar semana (checkpoint)\n");
+        printf("6. Recuperar semana\n");
+        printf("7. Salir\n");
+        printf("Seleccione opcion: ");
+        scanf("%d", &opcion);
+
+        if (opcion == 1) {
+            menuConfiguracionZona(zonas, numZonas);
+        } else if (opcion == 2) {
+            printf("Seleccione zona (0-%d): ", numZonas-1);
+            scanf("%d", &zonaSel);
+            printf("Semana (0-%d): ", MAX_SEMANAS-1);
+            scanf("%d", &semanaSel);
+            generarDatosAleatoriosSemana(&zonas[zonaSel], semanaSel);
+        } else if (opcion == 3) {
+            printf("Seleccione zona (0-%d): ", numZonas-1);
+            scanf("%d", &zonaSel);
+            printf("Semana (0-%d): ", MAX_SEMANAS-1);
+            scanf("%d", &semanaSel);
+            ingresarDatosManualSemana(&zonas[zonaSel], semanaSel);
+        } else if (opcion == 4) {
+            printf("Seleccione zona (0-%d): ", numZonas-1);
+            scanf("%d", &zonaSel);
+            printf("Semana (0-%d): ", MAX_SEMANAS-1);
+            scanf("%d", &semanaSel);
+            mostrarReporteSemanal(&zonas[zonaSel], semanaSel);
+        } else if (opcion == 5) {
+            printf("Seleccione zona (0-%d): ", numZonas-1);
+            scanf("%d", &zonaSel);
+            printf("Semana (0-%d): ", MAX_SEMANAS-1);
+            scanf("%d", &semanaSel);
+            guardarSemana(&zonas[zonaSel], semanaSel);
+        } else if (opcion == 6) {
+            printf("Seleccione zona (0-%d): ", numZonas-1);
+            scanf("%d", &zonaSel);
+            printf("Semana (0-%d): ", MAX_SEMANAS-1);
+            scanf("%d", &semanaSel);
+            cargarSemana(&zonas[zonaSel], semanaSel);
+        } else if (opcion == 7) {
             break;
         }
-        manejarOpcion(opcion, &sistema);
     }
     return 0;
 }

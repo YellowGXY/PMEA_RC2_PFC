@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "funciones.h"
 
 // Inicializa el sistema con datos de muestreo y guarda en datos_hist.dat
@@ -290,6 +291,152 @@ void registrarPredicciones(struct Sistema *s, float prediccion[]) {
         fprintf(f, "%s;%.1f;%.1f;%s\n", s->zonas[i].nombre, s->zonas[i].pm25, prediccion[i], nivel);
     }
     fclose(f);
+}
+
+// Inicializa zonas con nombres y umbrales por defecto
+void inicializarZonas(Zona zonas[], int *numZonas) {
+    char *nombres[] = {"Quito", "Cuenca", "Guayaquil", "Loja", "Ambato"};
+    for (int i = 0; i < *numZonas; i++) {
+        strncpy(zonas[i].nombre, nombres[i], MAX_NOMBRE_ZONA-1);
+        zonas[i].nombre[MAX_NOMBRE_ZONA-1] = 0;
+        zonas[i].numSemanas = 0;
+        // Inicializa semanas a cero
+        for (int s = 0; s < MAX_SEMANAS; s++) {
+            zonas[i].semanas[s].numDias = 0;
+        }
+        zonas[i].umbrales.co2.min = 380; zonas[i].umbrales.co2.max = 450;
+        zonas[i].umbrales.so2.min = 5;   zonas[i].umbrales.so2.max = 15;
+        zonas[i].umbrales.no2.min = 20;  zonas[i].umbrales.no2.max = 40;
+        zonas[i].umbrales.pm25.min = 5;  zonas[i].umbrales.pm25.max = 30;
+    }
+}
+
+// Menú para editar nombre y umbrales de una zona
+void menuConfiguracionZona(Zona zonas[], int numZonas) {
+    int idx;
+    printf("Seleccione zona (0-%d): ", numZonas-1);
+    scanf("%d", &idx);
+    getchar();
+    printf("Nombre actual: %s\n", zonas[idx].nombre);
+    printf("Nuevo nombre: ");
+    fgets(zonas[idx].nombre, MAX_NOMBRE_ZONA, stdin);
+    zonas[idx].nombre[strcspn(zonas[idx].nombre, "\n")] = 0;
+    editarUmbrales(&zonas[idx].umbrales);
+}
+
+void editarUmbrales(Umbrales *umbrales) {
+    printf("Editar umbrales (min max):\n");
+    printf("CO2: "); scanf("%f %f", &umbrales->co2.min, &umbrales->co2.max);
+    printf("SO2: "); scanf("%f %f", &umbrales->so2.min, &umbrales->so2.max);
+    printf("NO2: "); scanf("%f %f", &umbrales->no2.min, &umbrales->no2.max);
+    printf("PM2.5: "); scanf("%f %f", &umbrales->pm25.min, &umbrales->pm25.max);
+    getchar();
+}
+
+// Genera datos aleatorios para una semana
+void generarDatosAleatoriosSemana(Zona *zona, int semana) {
+    srand(time(NULL));
+    if (semana >= MAX_SEMANAS) return;
+    zona->semanas[semana].numDias = MAX_DIAS_SEMANA;
+    for (int d = 0; d < MAX_DIAS_SEMANA; d++) {
+        zona->semanas[semana].dias[d].co2 = 380 + rand() % 71; // 380-450
+        zona->semanas[semana].dias[d].so2 = 5 + rand() % 11;   // 5-15
+        zona->semanas[semana].dias[d].no2 = 20 + rand() % 21;  // 20-40
+        zona->semanas[semana].dias[d].pm25 = 5 + rand() % 26;  // 5-30
+        strcpy(zona->semanas[semana].dias[d].fecha, "2024-06-01"); // simplificado
+    }
+    if (semana >= zona->numSemanas) zona->numSemanas = semana+1;
+}
+
+// Ingreso manual de datos para una semana
+void ingresarDatosManualSemana(Zona *zona, int semana) {
+    if (semana >= MAX_SEMANAS) return;
+    zona->semanas[semana].numDias = MAX_DIAS_SEMANA;
+    for (int d = 0; d < MAX_DIAS_SEMANA; d++) {
+        printf("Dia %d (YYYY-MM-DD): ", d+1);
+        scanf("%s", zona->semanas[semana].dias[d].fecha);
+        printf("CO2: "); scanf("%f", &zona->semanas[semana].dias[d].co2);
+        printf("SO2: "); scanf("%f", &zona->semanas[semana].dias[d].so2);
+        printf("NO2: "); scanf("%f", &zona->semanas[semana].dias[d].no2);
+        printf("PM2.5: "); scanf("%f", &zona->semanas[semana].dias[d].pm25);
+    }
+    if (semana >= zona->numSemanas) zona->numSemanas = semana+1;
+}
+
+// Reporte semanal: promedios y alertas
+void mostrarReporteSemanal(Zona *zona, int semana) {
+    if (semana >= zona->numSemanas) {
+        printf("Semana no disponible.\n");
+        return;
+    }
+    float sumCO2=0, sumSO2=0, sumNO2=0, sumPM25=0;
+    int verde=0, amarilla=0, naranja=0, roja=0;
+    for (int d = 0; d < zona->semanas[semana].numDias; d++) {
+        DatosAmbientales *dia = &zona->semanas[semana].dias[d];
+        sumCO2 += dia->co2;
+        sumSO2 += dia->so2;
+        sumNO2 += dia->no2;
+        sumPM25 += dia->pm25;
+        char* color = alertaPM25(dia->pm25);
+        if (strcmp(color, "VERDE") == 0) verde++;
+        else if (strcmp(color, "AMARILLA") == 0) amarilla++;
+        else if (strcmp(color, "NARANJA") == 0) naranja++;
+        else roja++;
+    }
+    printf("Promedios semana %d - %s:\n", semana+1, zona->nombre);
+    printf("CO2: %.2f, SO2: %.2f, NO2: %.2f, PM2.5: %.2f\n",
+        sumCO2/7, sumSO2/7, sumNO2/7, sumPM25/7);
+    printf("Alertas PM2.5: VERDE=%d AMARILLA=%d NARANJA=%d ROJA=%d\n",
+        verde, amarilla, naranja, roja);
+}
+
+// Guardar y cargar semana (checkpoint simple)
+void guardarSemana(Zona *zona, int semana) {
+    char fname[64];
+    sprintf(fname, "%s_semana%d.dat", zona->nombre, semana+1);
+    FILE *f = fopen(fname, "wb");
+    if (f) {
+        fwrite(&zona->semanas[semana], sizeof(Semana), 1, f);
+        fclose(f);
+        printf("Semana guardada en %s\n", fname);
+    }
+}
+void cargarSemana(Zona *zona, int semana) {
+    char fname[64];
+    sprintf(fname, "%s_semana%d.dat", zona->nombre, semana+1);
+    FILE *f = fopen(fname, "rb");
+    if (f) {
+        fread(&zona->semanas[semana], sizeof(Semana), 1, f);
+        fclose(f);
+        printf("Semana %d cargada de %s\n", semana+1, fname);
+        if (semana >= zona->numSemanas) zona->numSemanas = semana+1;
+    } else {
+        printf("No existe checkpoint para esa semana.\n");
+    }
+}
+
+// Reemplazo de alertas por string
+char* alertaPM25(float valor) {
+    if (valor <= 12.0) return "VERDE";
+    if (valor <= 35.4) return "AMARILLA";
+    if (valor <= 55.4) return "NARANJA";
+    return "ROJA";
+}
+char* alertaNO2(float valor) {
+    if (valor <= 53) return "VERDE";
+    if (valor <= 100) return "AMARILLA";
+    if (valor <= 200) return "NARANJA";
+    return "ROJA";
+}
+char* alertaCO2(float valor, Umbral u) {
+    if (valor <= u.min) return "VERDE";
+    if (valor <= u.max) return "AMARILLA";
+    return "ROJA";
+}
+char* alertaSO2(float valor, Umbral u) {
+    if (valor <= u.min) return "VERDE";
+    if (valor <= u.max) return "AMARILLA";
+    return "ROJA";
 }
 
 // Maneja la opcion seleccionada del menu principal
