@@ -4,6 +4,17 @@
 #define MAX_DIAS_SEMANA 7
 #define MAX_NOMBRE_ZONA 32
 
+// Estructura para gestión de fechas del sistema
+struct ConfiguracionFechas {
+    int anio_inicio;
+    int mes_inicio;
+    int dia_inicio;
+    int usar_fechas_automaticas;  // 1 = usar fechas automáticas, 0 = pedir fecha cada vez
+};
+
+// Variable global para configuración de fechas
+extern struct ConfiguracionFechas config_fechas;
+
 struct Umbral {
     float min;
     float max;
@@ -39,75 +50,82 @@ struct Sistema {
     struct Zona zonas[MAX_ZONAS];
     int numZonas;
     char fecha[11]; 
+    struct ConfiguracionFechas config_fechas;  // Nueva configuración de fechas
 };
 
-typedef struct {
-    float min;
-    float max;
-} Umbral;
-
-typedef struct {
-    Umbral co2;
-    Umbral so2;
-    Umbral no2;
-    Umbral pm25;
-} Umbrales;
-
-typedef struct {
-    char fecha[11]; // YYYY-MM-DD
-    float co2, so2, no2, pm25;
-} DatosAmbientales;
-
-typedef struct {
-    DatosAmbientales dias[MAX_DIAS_SEMANA];
-    int numDias;
-} Semana;
-
-void inicializarSistema(struct Sistema *s);
-int cargarDatosHistoricos(struct Sistema *s, char *ruta);
-int guardarDatos(struct Sistema *s, char *ruta);
-void calcularPromedios(struct Sistema *s, float promedios[]);
-void predecirContaminacion(struct Sistema *s, float prediccion[]);
-void emitirAlertas(struct Sistema *s, float prediccion[], char alertas[][64], int *nAlertas);
-void generarRecomendaciones(char alertas[][64], int nAlertas);
-void mostrarTablaZonas(struct Sistema *s);
+void inicializarSistema(struct Sistema *sistema);
+int cargarDatosHistoricos(struct Sistema *sistema, char *ruta_archivo);
+int guardarDatos(struct Sistema *sistema, char *ruta_archivo);
+void calcularPromedios(struct Sistema *sistema, float promedios[]);
+void predecirContaminacion(struct Sistema *sistema, float prediccion[]);
+void emitirAlertas(struct Sistema *sistema, float prediccion[], char alertas[][64], int *numero_alertas);
+void generarRecomendaciones(char alertas[][64], int numero_alertas);
+void mostrarTablaZonas(struct Sistema *sistema);
 void mostrarMenuPrincipal();
-void manejarOpcion(int opcion, struct Sistema *s);
-int leerEntero(char *prompt, int min, int max, int allowCancel);
-float leerFloat(char *prompt, float min, float max, int allowCancel);
-int confirmar(char *mensaje);
+void manejarOpcion(int opcion_seleccionada, struct Sistema *sistema);
+int leerEntero(char *mensaje_prompt, int valor_minimo, int valor_maximo, int permitir_cancelar);
+float leerFloat(char *mensaje_prompt, float valor_minimo, float valor_maximo, int permitir_cancelar);
+int confirmar(char *mensaje_confirmacion);
 void ayudaMenu(char *menuNombre);
-void actualizarFechaManualmente(struct Sistema *s);
-// Funciones de ICA y alertas mejoradas
+void actualizarFechaManualmente(struct Sistema *sistema);
 char* calcularICA(float pm25);
 void mostrar_alerta(float pm25, char* zona);
-void registrarPredicciones(struct Sistema *s, float prediccion[]);
+void registrarPredicciones(struct Sistema *sistema, float prediccion[]);
+void mostrarHistorialZonas();
+void mostrarDetalleZona(struct Sistema *sistema);
+void buscarZonaPorNombre(struct Sistema *sistema);
 
 // Funciones de configuración y gestión
-void inicializarZonas(Zona zonas[], int *numZonas);
-void menuConfiguracionZona(Zona zonas[], int numZonas);
-void editarUmbrales(Umbrales *umbrales);
+void inicializarZonas(struct Zona zonas[], int *numero_zonas);
+void inicializarConfiguracionFechas(struct ConfiguracionFechas *config);
+void menuConfiguracionZona(struct Zona zonas[], int numero_zonas);
+void editarUmbrales(struct Umbrales *umbrales);
 void cambiarNombreZona(char *nombreZona);
 
 // Muestreo y datos
-void generarDatosAleatoriosSemana(Zona *zona, int semana);
-void ingresarDatosManualSemana(Zona *zona, int semana);
+void generarDatosAleatoriosSemana(struct Zona *zona, int numero_semana);
+void ingresarDatosManualSemana(struct Zona *zona, int numero_semana);
 
 // Reportes y recuperación
-void mostrarReporteSemanal(Zona *zona, int semana);
-void guardarSemana(Zona *zona, int semana);
-void cargarSemana(Zona *zona, int semana);
+void mostrarReporteSemanal(struct Zona *zona, int numero_semana);
+void guardarSemana(struct Zona *zona, int numero_semana);
+void cargarSemana(struct Zona *zona, int numero_semana);
 
-// Alertas
+// Alertas (solo funciones que devuelven string)
 char* alertaPM25(float valor);
 char* alertaNO2(float valor);
 char* alertaCO2(float valor, struct Umbral umbral);
 char* alertaSO2(float valor, struct Umbral umbral);
-    ALERTA_ROJA
-} NivelAlerta;
 
-NivelAlerta calcularAlertaPM25(float valor, Umbral umbral);
-NivelAlerta calcularAlertaNO2(float valor, Umbral umbral);
-NivelAlerta calcularAlertaCO2(float valor, Umbral umbral);
-NivelAlerta calcularAlertaSO2(float valor, Umbral umbral);
-const char* nombreAlerta(NivelAlerta nivel);
+#define ALERTA_VERDE   0
+#define ALERTA_AMARILLA 1
+#define ALERTA_NARANJA 2
+#define ALERTA_ROJA    3
+
+int calcularAlertaPM25(float valor, struct Umbral umbral);
+int calcularAlertaNO2(float valor, struct Umbral umbral);
+int calcularAlertaCO2(float valor, struct Umbral umbral);
+int calcularAlertaSO2(float valor, struct Umbral umbral);
+char* nombreAlerta(int nivel);
+
+// Funciones para gestión mejorada de fechas y entrada de datos
+void configurarFechasInicio(struct ConfiguracionFechas *config);
+void calcularFechaAutomatica(struct ConfiguracionFechas *config, int dia_relativo, char *fecha_resultado);
+void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct ConfiguracionFechas *config);
+int validarEntradaNumerica(char *entrada, float *resultado, float min, float max);
+void limpiarBuffer();
+void menuSiguienteSemana(struct Zona zonas[], int numZonas, int semanaActual[]);
+
+// Funciones para gestión de archivos temporales
+void guardarSemanaTemporal(struct Zona *zona, int numero_semana);
+void cargarSemanaTemporal(struct Zona *zona, int numero_semana);
+void limpiarDatosTemporales(struct Zona *zona, int numero_semana);
+void vaciarDatosTemporales();
+
+// Funciones de carga masiva de datos
+void exportarPlantillaDatos(const char *nombre_archivo);
+int importarDatosDesdeArchivo(struct Zona zonas[], int numero_zonas, const char *nombre_archivo);
+
+// Funciones para gestión de configuración de fechas
+int guardarConfiguracionFechas(struct ConfiguracionFechas *config);
+int cargarConfiguracionFechas(struct ConfiguracionFechas *config);
