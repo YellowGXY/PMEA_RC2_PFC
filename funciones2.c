@@ -12,8 +12,8 @@
 #define MAGENTA "\x1b[35m"
 #define AZUL    "\x1b[34m"
 
-// --- Menú de configuración ---
-void menuConfiguracion(struct Zona zonas[], int *numZonasPtr) {
+// --- Menu de configuracion ---
+void menuConfiguracion(struct Zona zonas[], int *numZonasPtr, int semanaActual[]) {
     int opcion_menu;
     
     while (1) {
@@ -30,61 +30,55 @@ void menuConfiguracion(struct Zona zonas[], int *numZonasPtr) {
         printf("| 8. Editar fecha actual del sistema            |\n");
         printf("| 9. Volver                                     |\n");
         printf("+-----------------------------------------------+\n" RESET);
-        printf("Seleccione opcion: ");
-        scanf("%d", &opcion_menu);
+        
+        int opcion_menu = leerEnteroSeguro("Seleccione opcion: ", 1, 9);
         
         if (opcion_menu == 1) {
             printf(AMARILLO "Zonas disponibles:\n" RESET);
             for (int indice_zona = 0; indice_zona < *numZonasPtr; indice_zona++) {
                 printf("Zona %d: %s\n", indice_zona+1, zonas[indice_zona].nombre);
             }
-            int zona_seleccionada;
-            printf("Seleccione zona a renombrar: ");
-            scanf("%d", &zona_seleccionada);
+            int zona_seleccionada = leerEnteroSeguro("Seleccione zona a renombrar: ", 1, *numZonasPtr);
             if (zona_seleccionada >= 1 && zona_seleccionada <= *numZonasPtr) {
                 char nombre_nuevo[32];
-                printf("Nuevo nombre para la zona %d: ", zona_seleccionada);
-                scanf("%s", nombre_nuevo);
+                leerCadenaSegura("Nuevo nombre para la zona: ", nombre_nuevo, 32);
                 strncpy(zonas[zona_seleccionada-1].nombre, nombre_nuevo, 32);
                 printf(VERDE "Nombre de la zona %d cambiado a %s.\n" RESET, zona_seleccionada, nombre_nuevo);
             } else {
                 printf(ROJO "Zona invalida.\n" RESET);
             }
         } else if (opcion_menu == 2) {
-            int maximo_semanas_nuevo;
-            printf("Nuevo maximo de semanas (1-104): ");
-            scanf("%d", &maximo_semanas_nuevo);
-            if (maximo_semanas_nuevo >= 1 && maximo_semanas_nuevo <= 104) {
-                extern int g_max_semanas;
-                g_max_semanas = maximo_semanas_nuevo;
-                printf(VERDE "Maximo de semanas actualizado a %d.\n" RESET, g_max_semanas);
-            } else {
-                printf(ROJO "Valor invalido. Debe estar entre 1 y 104.\n" RESET);
-            }
+            int maximo_semanas_nuevo = leerEnteroSeguro("Nuevo maximo de semanas (1-104): ", 1, 104);
+            extern int g_max_semanas;
+            g_max_semanas = maximo_semanas_nuevo;
+            printf(VERDE "Maximo de semanas actualizado a %d.\n" RESET, g_max_semanas);
         } else if (opcion_menu == 3) {
-            int maximo_dias_nuevo;
-            printf("Nuevo maximo de dias por semana (1-7): ");
-            scanf("%d", &maximo_dias_nuevo);
-            if (maximo_dias_nuevo >= 1 && maximo_dias_nuevo <= 7) {
-                extern int g_max_dias_semana;
-                g_max_dias_semana = maximo_dias_nuevo;
-                printf(VERDE "Maximo de dias por semana actualizado a %d.\n" RESET, g_max_dias_semana);
-            } else {
-                printf(ROJO "Valor invalido. Debe estar entre 1 y 7.\n" RESET);
-            }
+            int maximo_dias_nuevo = leerEnteroSeguro("Nuevo maximo de dias por semana (1-7): ", 1, 7);
+            extern int g_max_dias_semana;
+            g_max_dias_semana = maximo_dias_nuevo;
+            printf(VERDE "Maximo de dias por semana actualizado a %d.\n" RESET, g_max_dias_semana);
         } else if (opcion_menu == 4) {
             // Generar datos de muestreo para todas las zonas en la semana actual
+            printf(AMARILLO "Estado actual de semanas:\n" RESET);
             for (int indice_zona = 0; indice_zona < *numZonasPtr; indice_zona++) {
-                int semana_actual = zonas[indice_zona].numSemanas;
-                generarDatosAleatoriosSemana(&zonas[indice_zona], semana_actual);
-                printf(VERDE "Zona %s: Semana %d generada con datos de muestreo.\n" RESET, zonas[indice_zona].nombre, semana_actual+1);
+                printf("  %s: Semana actual %d (%d/%d días)\n", zonas[indice_zona].nombre, 
+                       semanaActual[indice_zona] + 1,
+                       zonas[indice_zona].semanas[semanaActual[indice_zona]].numDias,
+                       MAX_DIAS_SEMANA);
             }
+            printf(VERDE "\nGenerando datos de muestreo para semana actual...\n" RESET);
+            
+            for (int indice_zona = 0; indice_zona < *numZonasPtr; indice_zona++) {
+                generarDatosAleatoriosSemana(&zonas[indice_zona], semanaActual[indice_zona]);
+            }
+            
+            // Guardar el estado actualizado
+            guardarSemanaActual(semanaActual, *numZonasPtr);
         } else if (opcion_menu == 5) {
             configurarFechasInicio(&config_fechas);
         } else if (opcion_menu == 6) {
             char nombre_archivo[64];
-            printf("Nombre del archivo (ejemplo: mis_datos.txt): ");
-            scanf("%s", nombre_archivo);
+            leerCadenaSegura("Nombre del archivo (ejemplo: mis_datos.txt): ", nombre_archivo, 64);
             exportarPlantillaDatos(nombre_archivo);
             printf(VERDE "\n¡LISTO! Ahora:\n");
             printf("1. Abra %s en Bloc de Notas\n", nombre_archivo);
@@ -92,8 +86,7 @@ void menuConfiguracion(struct Zona zonas[], int *numZonasPtr) {
             printf("3. Guarde y use la opcion 7 para importar\n" RESET);
         } else if (opcion_menu == 7) {
             char nombre_archivo[64];
-            printf("Nombre del archivo con sus datos: ");
-            scanf("%s", nombre_archivo);
+            leerCadenaSegura("Nombre del archivo con sus datos: ", nombre_archivo, 64);
             printf(AMARILLO "Importando datos desde %s...\n" RESET, nombre_archivo);
             int registros_importados = importarDatosDesdeArchivo(zonas, *numZonasPtr, nombre_archivo);
             if (registros_importados > 0) {
@@ -103,18 +96,15 @@ void menuConfiguracion(struct Zona zonas[], int *numZonasPtr) {
                 printf(ROJO "No se pudo importar. Verifique el formato del archivo\n" RESET);
             }
         } else if (opcion_menu == 8) {
-            // Nueva opción para editar fecha actual
+            // Nueva opcion para editar fecha actual
             printf(AMARILLO "Fecha actual del sistema: %02d/%02d/%d\n" RESET, 
                    config_fechas.dia_inicio, config_fechas.mes_inicio, config_fechas.anio_inicio);
             printf("Ingrese nueva fecha:\n");
-            printf("Anio: ");
-            scanf("%d", &config_fechas.anio_inicio);
-            printf("Mes (1-12): ");
-            scanf("%d", &config_fechas.mes_inicio);
-            printf("Dia (1-31): ");
-            scanf("%d", &config_fechas.dia_inicio);
+            config_fechas.anio_inicio = leerEnteroSeguro("Anio: ", 1900, 2100);
+            config_fechas.mes_inicio = leerEnteroSeguro("Mes (1-12): ", 1, 12);
+            config_fechas.dia_inicio = leerEnteroSeguro("Dia (1-31): ", 1, 31);
             
-            // Validación básica
+            // Validacion basica
             if (config_fechas.mes_inicio < 1 || config_fechas.mes_inicio > 12) {
                 printf(ROJO "Mes invalido, estableciendo enero.\n" RESET);
                 config_fechas.mes_inicio = 1;
@@ -127,7 +117,7 @@ void menuConfiguracion(struct Zona zonas[], int *numZonasPtr) {
             printf(VERDE "Nueva fecha establecida: %02d/%02d/%d\n" RESET, 
                    config_fechas.dia_inicio, config_fechas.mes_inicio, config_fechas.anio_inicio);
             
-            // Guardar automáticamente la configuración actualizada
+            // Guardar automaticamente la configuracion actualizada
             guardarConfiguracionFechas(&config_fechas);
         } else if (opcion_menu == 9) {
             break;
@@ -137,7 +127,7 @@ void menuConfiguracion(struct Zona zonas[], int *numZonasPtr) {
     }
 }
 
-// --- Menú de reportes y exportación ---
+// --- Menu de reportes y exportacion ---
 void exportarReporteTabla(struct Zona zonas[], int numZonas) {
     FILE *f = fopen("reporte_zonas.txt", "w");
     if (!f) {
@@ -364,8 +354,9 @@ void menuReportes(struct Zona zonas[], int numZonas) {
         printf("| 5. Exportar alertas y recomendaciones|\n");
         printf("| 6. Volver                            |\n");
         printf("+--------------------------------------+\n" RESET);
-        printf("Seleccione opcion: ");
-        scanf("%d", &opcion_menu);
+        
+        int opcion_menu = leerEnteroSeguro("Seleccione opcion: ", 1, 6);
+        
         if (opcion_menu == 1) {
             printf(AMARILLO "Zonas disponibles:\n" RESET);
             printf("+----+------------------+\n");
@@ -375,15 +366,15 @@ void menuReportes(struct Zona zonas[], int numZonas) {
                 printf("| %-2d | %-16s |\n", indice_zona+1, zonas[indice_zona].nombre);
             }
             printf("+----+------------------+\n");
-            printf("Seleccione zona: ");
-            scanf("%d", &zona_seleccionada);
+            int zona_seleccionada = leerEnteroSeguro("Seleccione zona: ", 1, numZonas);
             if (zona_seleccionada >= 1 && zona_seleccionada <= numZonas) {
                 int maximo_semanas = zonas[zona_seleccionada-1].numSemanas;
                 if (maximo_semanas <= 0) {
                     maximo_semanas = 1;
                 }
-                printf("Semana (1-%d): ", maximo_semanas);
-                scanf("%d", &semana_seleccionada);
+                char mensaje_semana[64];
+                sprintf(mensaje_semana, "Semana (1-%d): ", maximo_semanas);
+                int semana_seleccionada = leerEnteroSeguro(mensaje_semana, 1, maximo_semanas);
                 semana_seleccionada = semana_seleccionada - 1;
                 if (semana_seleccionada >= 0 && semana_seleccionada < MAX_SEMANAS) {
                     mostrarReporteSemanal(&zonas[zona_seleccionada-1], semana_seleccionada);
@@ -443,10 +434,11 @@ void menuCheckpoints(struct Zona zonas[], int numZonas, int semanaActual[]) {
         printf("| 1. Guardar semana actual             |\n");
         printf("| 2. Retroceder a semana anterior      |\n");
         printf("| 3. Recuperar datos temporales        |\n");
-        printf("| 4. Volver                            |\n");
+        printf("| 4. Volver a semana actual            |\n");
+        printf("| 5. Volver                            |\n");
         printf("+--------------------------------------+\n" RESET);
-        printf("Seleccione opcion: ");
-        scanf("%d", &op);
+        
+        int op = leerEnteroSeguro("Seleccione opcion: ", 1, 5);
         
         if (op == 1) {
             // Guardar permanentemente la semana actual
@@ -454,6 +446,8 @@ void menuCheckpoints(struct Zona zonas[], int numZonas, int semanaActual[]) {
                 guardarSemana(&zonas[i], semanaActual[i]);
                 limpiarDatosTemporales(&zonas[i], semanaActual[i]);
             }
+            // Guardar estado de semanas actuales
+            guardarSemanaActual(semanaActual, numZonas);
             printf(VERDE "Checkpoint guardado permanentemente para todas las zonas (semana actual).\n" RESET);
             
         } else if (op == 2) {
@@ -468,24 +462,35 @@ void menuCheckpoints(struct Zona zonas[], int numZonas, int semanaActual[]) {
                 continue;
             }
             
-            printf("Semana a cargar (1-%d): ", maxSemana);
-            scanf("%d", &semanaSel);
+            char mensaje_semana[64];
+            sprintf(mensaje_semana, "Semana a cargar (1-%d): ", maxSemana);
+            int semanaSel = leerEnteroSeguro(mensaje_semana, 1, maxSemana);
             semanaSel = semanaSel - 1;
             
             if (semanaSel < 0 || semanaSel >= maxSemana) {
-                printf(ROJO "Semana inválida.\n" RESET);
+                printf(ROJO "Semana invalida.\n" RESET);
                 continue;
             }
             
             for (int i = 0; i < numZonas; i++) {
-                // Guardar temporalmente la semana actual antes de retroceder
-                guardarSemanaTemporal(&zonas[i], semanaActual[i]);
+                // Solo guardar temporalmente si no vamos a la semana 1
+                if (semanaSel > 0) {
+                    guardarSemanaTemporal(&zonas[i], semanaActual[i]);
+                }
                 
                 // Cargar la semana anterior
                 cargarSemana(&zonas[i], semanaSel);
                 semanaActual[i] = semanaSel;
             }
-            printf(AMARILLO "Semana %d cargada para todas las zonas (semana actual guardada temporalmente).\n" RESET, semanaSel+1);
+            // Guardar estado de semanas actuales
+            guardarSemanaActual(semanaActual, numZonas);
+            
+            if (semanaSel == 0) {
+                printf(AMARILLO "Semana %d cargada para todas las zonas (MODO VISUALIZACION SOLAMENTE).\n" RESET, semanaSel+1);
+                printf(CIAN "NOTA: La semana 1 contiene datos permanentes. No se crearan archivos adicionales.\n" RESET);
+            } else {
+                printf(AMARILLO "Semana %d cargada para todas las zonas (semana actual guardada temporalmente).\n" RESET, semanaSel+1);
+            }
             
         } else if (op == 3) {
             // Recuperar datos temporales guardados
@@ -494,8 +499,9 @@ void menuCheckpoints(struct Zona zonas[], int numZonas, int semanaActual[]) {
                 if (semanaActual[i] > maxSemanaTemp) maxSemanaTemp = semanaActual[i];
             }
             
-            printf("Recuperar datos temporales de que semana (1-%d): ", maxSemanaTemp+1);
-            scanf("%d", &semanaSel);
+            char mensaje_temp[64];
+            sprintf(mensaje_temp, "Recuperar datos temporales de que semana (1-%d): ", maxSemanaTemp+1);
+            int semanaSel = leerEnteroSeguro(mensaje_temp, 1, maxSemanaTemp+1);
             semanaSel = semanaSel - 1;
             
             if (semanaSel < 0 || semanaSel > maxSemanaTemp) {
@@ -518,12 +524,59 @@ void menuCheckpoints(struct Zona zonas[], int numZonas, int semanaActual[]) {
             }
             
             if (recuperados > 0) {
+                // Guardar estado de semanas actuales
+                guardarSemanaActual(semanaActual, numZonas);
                 printf(VERDE "Datos temporales recuperados para %d zonas.\n" RESET, recuperados);
             } else {
                 printf(ROJO "No se encontraron datos temporales para esa semana.\n" RESET);
             }
             
         } else if (op == 4) {
+            // Volver a semana actual (recuperar desde archivos temporales si existen)
+            printf(AMARILLO "Recuperando semana actual...\n" RESET);
+            
+            int recuperados = 0;
+            for (int i = 0; i < numZonas; i++) {
+                // Intentar cargar datos temporales más recientes
+                int semanaTemp = -1;
+                for (int s = MAX_SEMANAS - 1; s >= 0; s--) {
+                    char tempFile[64];
+                    sprintf(tempFile, "temp_%s_semana%d.dat", zonas[i].nombre, s+1);
+                    FILE *f = fopen(tempFile, "rb");
+                    if (f) {
+                        fclose(f);
+                        semanaTemp = s;
+                        break;
+                    }
+                }
+                
+                if (semanaTemp != -1) {
+                    cargarSemanaTemporal(&zonas[i], semanaTemp);
+                    semanaActual[i] = semanaTemp;
+                    recuperados++;
+                } else {
+                    // Si no hay datos temporales, cargar la semana más alta guardada
+                    int maxSemanaGuardada = 0;
+                    for (int s = 0; s < MAX_SEMANAS; s++) {
+                        char archivo[64];
+                        sprintf(archivo, "%s_semana%d.dat", zonas[i].nombre, s+1);
+                        FILE *f = fopen(archivo, "rb");
+                        if (f) {
+                            fclose(f);
+                            maxSemanaGuardada = s;
+                        }
+                    }
+                    cargarSemana(&zonas[i], maxSemanaGuardada);
+                    semanaActual[i] = maxSemanaGuardada;
+                    recuperados++;
+                }
+            }
+            
+            // Guardar estado de semanas actuales
+            guardarSemanaActual(semanaActual, numZonas);
+            printf(VERDE "Vuelto a semana actual para %d zonas.\n" RESET, recuperados);
+            
+        } else if (op == 5) {
             break;
         } else {
             printf(ROJO "Opcion invalida.\n" RESET);
@@ -542,9 +595,22 @@ void menuIngresoManual(struct Zona zonas[], int numZonas, int semanaActual[]) {
     }
     printf("+----+------------------+----------+\n");
     
-    int zonaSel;
-    printf("\nSeleccione zona (0 para cancelar): ");
-    scanf("%d", &zonaSel);
+    // Verificar si alguna zona está en semana 1
+    int enSemana1 = 0;
+    for (int i = 0; i < numZonas; i++) {
+        if (semanaActual[i] == 0) {
+            enSemana1 = 1;
+            break;
+        }
+    }
+    
+    if (enSemana1) {
+        printf(ROJO "\nNOTA: No se puede modificar datos en la semana 1 (datos permanentes).\n" RESET);
+        printf(CIAN "Use la opcion 'Volver a semana actual' en el menu de checkpoints para editar datos.\n" RESET);
+        return;
+    }
+    
+    int zonaSel = leerEnteroSeguro("\nSeleccione zona (0 para cancelar): ", 0, numZonas);
     
     if (zonaSel == 0) {
         return;
@@ -552,6 +618,8 @@ void menuIngresoManual(struct Zona zonas[], int numZonas, int semanaActual[]) {
     
     if (zonaSel >= 1 && zonaSel <= numZonas) {
         ingresarDatosManualMejorado(&zonas[zonaSel-1], semanaActual[zonaSel-1], &config_fechas);
+        // Guardar estado de semanas actuales después de ingresar datos
+        guardarSemanaActual(semanaActual, numZonas);
     } else {
         printf(ROJO "Zona invalida.\n" RESET);
     }
@@ -601,13 +669,43 @@ void menuSiguienteSemana(struct Zona zonas[], int numZonas, int semanaActual[]) 
     printf("|          AVANZAR A SIGUIENTE SEMANA         |\n");
     printf("+----------------------------------------------+\n" RESET);
     
+    // Avanzar la fecha del sistema en 7 días (1 semana)
+    extern struct ConfiguracionFechas config_fechas;
+    config_fechas.dia_inicio += 7;
+    
+    // Ajustar días por mes (simplificado)
+    int dias_mes[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    
+    // Ajustar año bisiesto
+    if ((config_fechas.anio_inicio % 4 == 0 && config_fechas.anio_inicio % 100 != 0) || 
+        (config_fechas.anio_inicio % 400 == 0)) {
+        dias_mes[1] = 29;
+    }
+    
+    // Ajustar día y mes si excede los límites
+    while (config_fechas.dia_inicio > dias_mes[config_fechas.mes_inicio-1]) {
+        config_fechas.dia_inicio -= dias_mes[config_fechas.mes_inicio-1];
+        config_fechas.mes_inicio++;
+        if (config_fechas.mes_inicio > 12) {
+            config_fechas.mes_inicio = 1;
+            config_fechas.anio_inicio++;
+            // Recalcular año bisiesto para el nuevo año
+            if ((config_fechas.anio_inicio % 4 == 0 && config_fechas.anio_inicio % 100 != 0) || 
+                (config_fechas.anio_inicio % 400 == 0)) {
+                dias_mes[1] = 29;
+            } else {
+                dias_mes[1] = 28;
+            }
+        }
+    }
+    
     for (int i = 0; i < numZonas; i++) {
-        // Verificar si la semana actual está completa
+        // Verificar si la semana actual está completa (debe tener exactamente 7 días)
         if (zonas[i].semanas[semanaActual[i]].numDias == MAX_DIAS_SEMANA) {
             // Guardar permanentemente la semana actual antes de avanzar
             guardarSemana(&zonas[i], semanaActual[i]);
             
-            // Limpiar archivos temporales de esta semana ya que se guardó permanentemente
+            // Limpiar archivos temporales de esta semana ya que se guardo permanentemente
             limpiarDatosTemporales(&zonas[i], semanaActual[i]);
             
             // Avanzar a la siguiente semana
@@ -623,19 +721,29 @@ void menuSiguienteSemana(struct Zona zonas[], int numZonas, int semanaActual[]) 
         } else {
             printf(ROJO "Zona %s: Complete la semana actual (%d/%d días) antes de avanzar.\n" RESET, 
                    zonas[i].nombre, zonas[i].semanas[semanaActual[i]].numDias, MAX_DIAS_SEMANA);
+            printf(AMARILLO "  Sugerencia: Use 'Configuracion > Generar datos de muestreo' para completar automáticamente.\n" RESET);
         }
     }
+    
+    // Guardar la configuracion de fechas actualizada
+    guardarConfiguracionFechas(&config_fechas);
+    
+    // Guardar el estado de semanas actuales
+    guardarSemanaActual(semanaActual, numZonas);
+    
+    printf(VERDE "Fecha del sistema actualizada a: %02d/%02d/%d\n" RESET, 
+           config_fechas.dia_inicio, config_fechas.mes_inicio, config_fechas.anio_inicio);
 }
 
 // --- Generar datos de muestreo VARIADOS para demostrar todos los tipos de alertas ---
 void generarDatosAleatoriosSemana(struct Zona *zona, int semana) {
     // Genera datos predefinidos específicos para cada ciudad ecuatoriana
-    // Cada ciudad tendrá un nivel diferente de contaminación para mostrar todas las alertas
+    // Cada ciudad tendra un nivel diferente de contaminacion para mostrar todas las alertas
     
     // Datos base según la ciudad para generar diferentes niveles de alerta
     // PM2.5: VERDE=≤12, AMARILLA=12-35, NARANJA=35-55, ROJA=>55
     float base_pm25[] = {10.0f, 25.0f, 45.0f, 70.0f, 20.0f}; // Quito=VERDE, Cuenca=AMARILLA, Guayaquil=NARANJA, Loja=ROJA, Ambato=AMARILLA
-    float base_co2[] = {390.0f, 410.0f, 440.0f, 470.0f, 0.07f}; // Quito-Ambato=Normal, Ambato=Alto para alerta CO2
+    float base_co2[] = {390.0f, 410.0f, 440.0f, 470.0f, 450.0f}; // Todos valores normales de CO2
     
     // Determinar índice de la ciudad ecuatoriana para asignar el tipo de alerta correspondiente
     int zonaIndex = 0; // Por defecto Quito (VERDE - saludable)
@@ -644,18 +752,30 @@ void generarDatosAleatoriosSemana(struct Zona *zona, int semana) {
     else if (strcmp(zona->nombre, "Loja") == 0) zonaIndex = 3;      // ROJA - peligroso
     else if (strcmp(zona->nombre, "Ambato") == 0) zonaIndex = 4;    // AMARILLA + alerta CO2
     
-    // Generar 7 días de datos
-    for (int d = 0; d < 7; d++) {
+    // Obtener fecha actual del sistema para generar fechas automáticas
+    extern struct ConfiguracionFechas config_fechas;
+    
+    // Generar exactamente 7 días de datos completos
+    for (int d = 0; d < MAX_DIAS_SEMANA; d++) {
         zona->semanas[semana].dias[d].pm25 = base_pm25[zonaIndex] + (d * 0.5f);
         zona->semanas[semana].dias[d].co2 = base_co2[zonaIndex] + (d * 2.0f);
         zona->semanas[semana].dias[d].so2 = 5.0f + (d * 0.8f);
         zona->semanas[semana].dias[d].no2 = 20.0f + (d * 5.0f);
-        snprintf(zona->semanas[semana].dias[d].fecha, sizeof(zona->semanas[semana].dias[d].fecha), "2024-06-%02d", d+1);
+        
+        // Generar fechas automaticas usando la configuracion del sistema
+        int dia_relativo = (semana * MAX_DIAS_SEMANA) + d;
+        calcularFechaAutomatica(&config_fechas, dia_relativo, zona->semanas[semana].dias[d].fecha);
     }
 
-    zona->semanas[semana].numDias = 7;
+    // Establecer que se completaron todos los 7 días
+    zona->semanas[semana].numDias = MAX_DIAS_SEMANA;
+    
+    // Actualizar el número de semanas de la zona
     if (semana >= zona->numSemanas) {
-        zona->numSemanas = semana+1;
+        zona->numSemanas = semana + 1;
     }
+    
+    printf(VERDE "Generados %d días completos para %s semana %d\n" RESET, 
+           MAX_DIAS_SEMANA, zona->nombre, semana + 1);
 }
 
