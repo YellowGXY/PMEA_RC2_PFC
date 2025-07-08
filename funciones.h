@@ -81,6 +81,7 @@ void inicializarConfiguracionFechas(struct ConfiguracionFechas *config);
 void menuConfiguracionZona(struct Zona zonas[], int numero_zonas);
 void editarUmbrales(struct Umbrales *umbrales);
 void cambiarNombreZona(char *nombreZona);
+void menuConfiguracion(struct Zona zonas[], int *numZonasPtr, int semanaActual[]);
 
 // Muestreo y datos
 void generarDatosAleatoriosSemana(struct Zona *zona, int numero_semana);
@@ -129,3 +130,17 @@ int importarDatosDesdeArchivo(struct Zona zonas[], int numero_zonas, const char 
 // Funciones para gestión de configuración de fechas
 int guardarConfiguracionFechas(struct ConfiguracionFechas *config);
 int cargarConfiguracionFechas(struct ConfiguracionFechas *config);
+
+// Funciones para gestión de estado de semanas actuales
+void guardarSemanaActual(int semanaActual[], int numZonas);
+void cargarSemanaActual(int semanaActual[], int numZonas);
+void cargarDatosZonas(struct Zona zonas[], int numZonas);
+
+// Funciones robustas para entrada de datos
+int leerEnteroSeguro(const char *mensaje, int min, int max);
+float leerFloatSeguro(const char *mensaje, float min, float max);
+char leerCaracterSeguro(const char *mensaje);
+void leerCadenaSegura(const char *mensaje, char *destino, int tamano_max);
+void limpiarBufferEntrada();
+int validarEnteroEnRango(const char *entrada, int min, int max);
+int validarFloatEnRango(const char *entrada, float min, float max);
