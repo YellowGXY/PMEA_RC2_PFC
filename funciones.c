@@ -13,7 +13,7 @@
 #define ANSI_MAGENTA "\x1b[35m"
 #define ANSI_AZUL    "\x1b[34m"
 
-// Constantes para validación de datos
+// Constantes para validacion de datos
 #define MIN_TEMP -50.0f
 #define MAX_TEMP 60.0f
 #define MIN_WIND 0.0f
@@ -61,11 +61,11 @@ void inicializarZonas(struct Zona zonas[], int *numero_zonas) {
 }
 
 /**
- * Inicializa la configuración de fechas con valores por defecto
+ * Inicializa la configuracion de fechas con valores por defecto
  */
 void inicializarConfiguracionFechas(struct ConfiguracionFechas *config) {
-    // Configuración por defecto: año actual, enero 1
-    config->anio_inicio = 2024;
+    // Configuracion por defecto: año actual, enero 1
+    config->anio_inicio = 2025;
     config->mes_inicio = 1;
     config->dia_inicio = 1;
     config->usar_fechas_automaticas = 1; // Por defecto usar fechas automáticas
@@ -74,13 +74,13 @@ void inicializarConfiguracionFechas(struct ConfiguracionFechas *config) {
 /**
 // Inicializa el sistema con datos NORMALES/SALUDABLES de demostración
 // Los valores son intencionalmente bajos para mostrar estado saludable inicial
-// Usar "Generar datos de muestreo" (Configuración) para datos variados con alertas
+// Usar "Generar datos de muestreo" (Configuracion) para datos variados con alertas
  */
 void inicializarSistema(struct Sistema *sistema) {
     // Nombres de las ciudades ecuatorianas por defecto
     char *nombres[5] = {"Quito", "Cuenca", "Guayaquil", "Loja", "Ambato"};
     
-    // Datos de muestra NORMALES/SALUDABLES para demostración inicial
+    // Datos de muestra NORMALES/SALUDABLES para demostracion inicial
     // Formato: {CO2, SO2, NO2, PM2.5, Temperatura, Viento, Humedad}
     float datos[5][7] = {
         {0.038, 0.008, 0.025, 8.5, 18.5, 2.8, 62.0},   // Quito - aire saludable
@@ -114,7 +114,7 @@ void inicializarSistema(struct Sistema *sistema) {
 }
 
 /**
- * Carga datos históricos desde un archivo binario
+ * Carga datos historicos desde un archivo binario
  * Devuelve 1 si la carga fue exitosa, 0 en caso contrario
  */
 int cargarDatosHistoricos(struct Sistema *sistema, char *ruta_archivo) {
@@ -175,7 +175,7 @@ void calcularPromedios(struct Sistema *sistema, float promedios[]) {
 }
 
 /**
- * Predice la contaminación para las próximas 24 horas usando un modelo ponderado
+ * Predice la contaminacion para las proximas 24 horas usando un modelo ponderado
  * Guarda las predicciones en el array prediccion
  */
 void predecirContaminacion(struct Sistema *sistema, float prediccion[]) {
@@ -183,7 +183,7 @@ void predecirContaminacion(struct Sistema *sistema, float prediccion[]) {
     calcularPromedios(sistema, promedios);
     float pm_promedio = promedios[3]; // Promedio global de PM2.5
     
-    // Calcular predicción para cada zona usando modelo híbrido
+    // Calcular prediccion para cada zona usando modelo hibrido
     for (int indice_zona = 0; indice_zona < sistema->numZonas; indice_zona++) {
         // 70% valor actual + 30% promedio global para suavizar fluctuaciones
         prediccion[indice_zona] = sistema->zonas[indice_zona].pm25 * 0.7f + pm_promedio * 0.3f;
@@ -198,7 +198,7 @@ void predecirContaminacion(struct Sistema *sistema, float prediccion[]) {
 }
 
 /**
- * Emite alertas cuando los niveles de contaminación superan los límites OMS
+ * Emite alertas cuando los niveles de contaminacion superan los limites OMS
  * Llena el array de alertas y actualiza el contador numero_alertas
  */
 void emitirAlertas(struct Sistema *sistema, float prediccion[], char alertas[][64], int *numero_alertas) {
@@ -263,99 +263,176 @@ void mostrarTablaZonas(struct Sistema *sistema) {
     printf("+--------+-------+-------+-------+-------+\n");
 }
 
+// ===============================
+// FUNCIONES ROBUSTAS DE ENTRADA DE DATOS
+// ===============================
+
 /**
- * Lee un entero validado desde la entrada estándar con opción de cancelar
- * Devuelve el entero leído o -1 si se canceló
+ * Limpia el buffer de entrada estándar
  */
-int leerEntero(char *mensaje_prompt, int valor_minimo, int valor_maximo, int permitir_cancelar) {
-    char buffer_entrada[32];
-    int valor_leido;
+void limpiarBufferEntrada() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
+
+/**
+ * Valida que una cadena contenga un entero válido dentro del rango especificado
+ * Retorna 1 si es válido, 0 si no
+ */
+int validarEnteroEnRango(const char *entrada, int min, int max) {
+    char *endptr;
+    long valor = strtol(entrada, &endptr, 10);
+    
+    // Verificar que toda la cadena fue procesada y no hay overflow
+    if (*endptr != '\0' && *endptr != '\n' && *endptr != '\r') {
+        return 0;
+    }
+    
+    // Verificar rango
+    if (valor < min || valor > max) {
+        return 0;
+    }
+    
+    return 1;
+}
+
+/**
+ * Valida que una cadena contenga un float válido dentro del rango especificado
+ * Retorna 1 si es válido, 0 si no
+ */
+int validarFloatEnRango(const char *entrada, float min, float max) {
+    char *endptr;
+    double valor = strtod(entrada, &endptr);
+    
+    // Verificar que toda la cadena fue procesada
+    if (*endptr != '\0' && *endptr != '\n' && *endptr != '\r') {
+        return 0;
+    }
+    
+    // Verificar rango
+    if (valor < min || valor > max) {
+        return 0;
+    }
+    
+    return 1;
+}
+
+/**
+ * Lee un entero de forma segura con validación de rango
+ */
+int leerEnteroSeguro(const char *mensaje, int min, int max) {
+    char buffer[256];
+    int valor;
     
     while (1) {
-        printf("%s", mensaje_prompt);
+        printf("%s", mensaje);
         
-        // Leer línea completa
-        if (fgets(buffer_entrada, sizeof(buffer_entrada), stdin) == NULL) {
-            continue; // Error de lectura, intentar de nuevo
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+            printf("Error de lectura. Intente nuevamente.\n");
+            continue;
         }
         
-        // Verificar si el usuario quiere cancelar
-        if (permitir_cancelar && (buffer_entrada[0] == 'c' || buffer_entrada[0] == 'C')) {
-            return -1;
+        // Remover salto de línea si existe
+        size_t len = strlen(buffer);
+        if (len > 0 && buffer[len - 1] == '\n') {
+            buffer[len - 1] = '\0';
         }
         
-        // Intentar convertir a entero y validar rango
-        if (sscanf(buffer_entrada, "%d", &valor_leido) == 1 && valor_leido >= valor_minimo && valor_leido <= valor_maximo) {
-            return valor_leido;
+        if (validarEnteroEnRango(buffer, min, max)) {
+            sscanf(buffer, "%d", &valor);
+            return valor;
         }
         
-        printf("Entrada invalida. Debe estar entre %d y %d. Intente de nuevo.\n", valor_minimo, valor_maximo);
+        printf("Entrada invalida. Debe ser un numero entero entre %d y %d.\n", min, max);
     }
 }
 
 /**
- * Lee un número decimal validado desde la entrada estándar con opción de cancelar
- * Devuelve el float leído o -1.0f si se canceló
+ * Lee un float de forma segura con validación de rango
  */
-float leerFloat(char *mensaje_prompt, float valor_minimo, float valor_maximo, int permitir_cancelar) {
-    char buffer_entrada[32];
-    float valor_leido;
+float leerFloatSeguro(const char *mensaje, float min, float max) {
+    char buffer[256];
+    float valor;
     
     while (1) {
-        printf("%s", mensaje_prompt);
+        printf("%s", mensaje);
         
-        // Leer línea completa
-        if (fgets(buffer_entrada, sizeof(buffer_entrada), stdin) == NULL) {
-            continue; // Error de lectura, intentar de nuevo
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+            printf("Error de lectura. Intente nuevamente.\n");
+            continue;
         }
         
-        // Verificar si el usuario quiere cancelar
-        if (permitir_cancelar && (buffer_entrada[0] == 'c' || buffer_entrada[0] == 'C')) {
-            return -1.0f;
+        // Remover salto de línea si existe
+        size_t len = strlen(buffer);
+        if (len > 0 && buffer[len - 1] == '\n') {
+            buffer[len - 1] = '\0';
         }
         
-        // Intentar convertir a float y validar rango
-        if (sscanf(buffer_entrada, "%f", &valor_leido) == 1 && valor_leido >= valor_minimo && valor_leido <= valor_maximo) {
-            return valor_leido;
+        if (validarFloatEnRango(buffer, min, max)) {
+            sscanf(buffer, "%f", &valor);
+            return valor;
         }
         
-        printf("Entrada invalida. Debe estar entre %.2f y %.2f. Intente de nuevo.\n", valor_minimo, valor_maximo);
+        printf("Entrada invalida. Debe ser un numero decimal entre %.2f y %.2f.\n", min, max);
     }
-}
-
-// Solicita confirmación del usuario (sí/no)
-// Devuelve 1 si el usuario confirma (s/S), 0 en caso contrario
-int confirmar(char *mensaje_confirmacion) {
-    char buffer_respuesta[8];
-    printf("%s (s/n): ", mensaje_confirmacion);
-    
-    if (fgets(buffer_respuesta, sizeof(buffer_respuesta), stdin) == NULL) {
-        return 0; // Error de lectura, asumir "no"
-    }
-    
-    return (buffer_respuesta[0] == 's' || buffer_respuesta[0] == 'S');
 }
 
 /**
-// Muestra ayuda contextual para los menús del sistema
+ * Lee un carácter de forma segura
  */
-void ayudaMenu(char *menuNombre) {
-    printf("\nAyuda para menu %s:\n", menuNombre);
-    printf("Ingrese el numero de la opcion deseada.\n");
-    printf("Presione 'c' para cancelar o volver.\n\n");
+char leerCaracterSeguro(const char *mensaje) {
+    char buffer[256];
     
-    printf("Opciones principales:\n");
-    printf(" 1: Inicializa el sistema con datos de ejemplo.\n");
-    printf(" 2: Carga datos historicos desde archivo.\n");
-    printf(" 3: Muestra tabla y promedios de contaminantes.\n");
-    printf(" 4: Predice contaminacion para 24h futuras.\n");
-    printf(" 5: Muestra alertas si hay contaminantes fuera de norma.\n");
-    printf(" 6: Muestra recomendaciones de mitigacion.\n");
-    printf(" 7: Permite ingresar datos manualmente.\n");
-    printf(" 8: Exporta alertas y recomendaciones a archivo.\n");
-    printf("10: Muestra historial de zonas.\n");
-    printf("11: Muestra detalle de una zona.\n");
-    printf("12: Buscar zona por nombre.\n\n");
+    while (1) {
+        printf("%s", mensaje);
+        
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+            printf("Error de lectura. Intente nuevamente.\n");
+            continue;
+        }
+        
+        // Verificar que hay al menos un carácter
+        if (strlen(buffer) > 0 && buffer[0] != '\n') {
+            return buffer[0];
+        }
+        
+        printf("Entrada invalida. Debe ingresar al menos un caracter.\n");
+    }
+}
+
+/**
+ * Lee una cadena de forma segura con validación de longitud
+ */
+void leerCadenaSegura(const char *mensaje, char *destino, int tamano_max) {
+    char buffer[512];
+    
+    while (1) {
+        printf("%s", mensaje);
+        
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+            printf("Error de lectura. Intente nuevamente.\n");
+            continue;
+        }
+        
+        // Remover salto de línea si existe
+        size_t len = strlen(buffer);
+        if (len > 0 && buffer[len - 1] == '\n') {
+            buffer[len - 1] = '\0';
+            len--;
+        }
+        
+        // Verificar longitud
+        if (len > 0 && len < tamano_max) {
+            strcpy(destino, buffer);
+            return;
+        }
+        
+        if (len == 0) {
+            printf("Entrada invalida. Debe ingresar al menos un caracter.\n");
+        } else {
+            printf("Entrada demasiado larga. Maximo %d caracteres.\n", tamano_max - 1);
+        }
+    }
 }
 
 /**
@@ -370,7 +447,7 @@ void mostrarHistorialZonas() {
         return;
     }
     
-    // Cargar datos históricos
+    // Cargar datos historicos
     fread(&sistema, sizeof(struct Sistema), 1, archivo);
     fclose(archivo);
     
@@ -378,7 +455,7 @@ void mostrarHistorialZonas() {
     mostrarTablaZonas(&sistema);
 }
 
-// Muestra información detallada de una zona específica
+// Muestra informacion detallada de una zona especifica
 void mostrarDetalleZona(struct Sistema *sistema) {
     if (sistema->numZonas == 0) {
         printf("No hay zonas cargadas.\n");
@@ -391,8 +468,8 @@ void mostrarDetalleZona(struct Sistema *sistema) {
         printf("%d. %s\n", indice_zona, sistema->zonas[indice_zona].nombre);
     }
     
-    // Solicitar selección al usuario
-    int indice_seleccionado = leerEntero("Opcion: ", 0, sistema->numZonas-1, 1);
+    // Solicitar seleccion al usuario
+    int indice_seleccionado = leerEnteroSeguro("Opcion: ", 0, sistema->numZonas-1);
     if (indice_seleccionado < 0) {
         return; // Usuario canceló
     }
@@ -533,21 +610,16 @@ void registrarPredicciones(struct Sistema *sistema, float prediccion[]) {
 
  */
 void menuConfiguracionZona(struct Zona zonas[], int numero_zonas) {
-    int indice_zona_seleccionada;
-    printf("Seleccione zona (0-%d): ", numero_zonas-1);
-    scanf("%d", &indice_zona_seleccionada);
-    getchar(); // Limpiar buffer
+    char mensaje[64];
+    sprintf(mensaje, "Seleccione zona (0-%d): ", numero_zonas-1);
+    int indice_zona_seleccionada = leerEnteroSeguro(mensaje, 0, numero_zonas-1);
     
     if (indice_zona_seleccionada >= 0 && indice_zona_seleccionada < numero_zonas) {
         printf("Nombre actual: %s\n", zonas[indice_zona_seleccionada].nombre);
-        printf("Nuevo nombre: ");
-        
-        if (fgets(zonas[indice_zona_seleccionada].nombre, MAX_NOMBRE_ZONA, stdin)) {
-            zonas[indice_zona_seleccionada].nombre[strcspn(zonas[indice_zona_seleccionada].nombre, "\n")] = 0;
-            editarUmbrales(&zonas[indice_zona_seleccionada].umbrales);
-        }
+        leerCadenaSegura("Nuevo nombre: ", zonas[indice_zona_seleccionada].nombre, MAX_NOMBRE_ZONA);
+        editarUmbrales(&zonas[indice_zona_seleccionada].umbrales);
     } else {
-        printf("Zona inválida.\n");
+        printf("Zona invalida.\n");
     }
 }
 
@@ -558,19 +630,17 @@ void menuConfiguracionZona(struct Zona zonas[], int numero_zonas) {
 void editarUmbrales(struct Umbrales *umbrales) {
     printf("Editar umbrales (min max):\n");
     
-    printf("CO2 (ppm): ");
-    scanf("%f %f", &umbrales->co2.min, &umbrales->co2.max);
+    umbrales->co2.min = leerFloatSeguro("CO2 minimo (ppm): ", 0.0, 10000.0);
+    umbrales->co2.max = leerFloatSeguro("CO2 maximo (ppm): ", umbrales->co2.min, 10000.0);
     
-    printf("SO2 (µg/m³): ");
-    scanf("%f %f", &umbrales->so2.min, &umbrales->so2.max);
+    umbrales->so2.min = leerFloatSeguro("SO2 minimo (µg/m³): ", 0.0, 1000.0);
+    umbrales->so2.max = leerFloatSeguro("SO2 maximo (µg/m³): ", umbrales->so2.min, 1000.0);
     
-    printf("NO2 (µg/m³): ");
-    scanf("%f %f", &umbrales->no2.min, &umbrales->no2.max);
+    umbrales->no2.min = leerFloatSeguro("NO2 minimo (µg/m³): ", 0.0, 1000.0);
+    umbrales->no2.max = leerFloatSeguro("NO2 maximo (µg/m³): ", umbrales->no2.min, 1000.0);
     
-    printf("PM2.5 (µg/m³): ");
-    scanf("%f %f", &umbrales->pm25.min, &umbrales->pm25.max);
-    
-    getchar(); // Limpiar buffer
+    umbrales->pm25.min = leerFloatSeguro("PM2.5 minimo (µg/m³): ", 0.0, 500.0);
+    umbrales->pm25.max = leerFloatSeguro("PM2.5 maximo (µg/m³): ", umbrales->pm25.min, 500.0);
 }
 
 /**
@@ -579,15 +649,11 @@ void editarUmbrales(struct Umbrales *umbrales) {
  */
 void cambiarNombreZona(char *nombreZona) {
     char nuevoNombre[MAX_NOMBRE_ZONA];
-    printf("Ingrese el nuevo nombre para la zona: ");
-    getchar(); // Limpiar buffer
+    leerCadenaSegura("Ingrese el nuevo nombre para la zona: ", nuevoNombre, MAX_NOMBRE_ZONA);
     
-    if (fgets(nuevoNombre, sizeof(nuevoNombre), stdin)) {
-        nuevoNombre[strcspn(nuevoNombre, "\n")] = 0;
-        strncpy(nombreZona, nuevoNombre, MAX_NOMBRE_ZONA-1);
-        nombreZona[MAX_NOMBRE_ZONA-1] = 0;
-        printf("Nombre de zona actualizado a: %s\n", nombreZona);
-    }
+    strncpy(nombreZona, nuevoNombre, MAX_NOMBRE_ZONA-1);
+    nombreZona[MAX_NOMBRE_ZONA-1] = 0;
+    printf("Nombre de zona actualizado a: %s\n", nombreZona);
 }
 
 /**
@@ -597,7 +663,7 @@ void cambiarNombreZona(char *nombreZona) {
  */
 void ingresarDatosManualSemana(struct Zona *zona, int numero_semana) {
     if (numero_semana >= MAX_SEMANAS) {
-        printf("Semana inválida. Debe estar entre 0 y %d.\n", MAX_SEMANAS-1);
+        printf("Semana invalida. Debe estar entre 0 y %d.\n", MAX_SEMANAS-1);
         return;
     }
     
@@ -606,20 +672,11 @@ void ingresarDatosManualSemana(struct Zona *zona, int numero_semana) {
     for (int indice_dia = 0; indice_dia < MAX_DIAS_SEMANA; indice_dia++) {
         printf("\n--- Día %d ---\n", indice_dia+1);
         
-        printf("Fecha (YYYY-MM-DD): ");
-        scanf("%s", zona->semanas[numero_semana].dias[indice_dia].fecha);
-        
-        printf("CO2 (ppm): ");
-        scanf("%f", &zona->semanas[numero_semana].dias[indice_dia].co2);
-        
-        printf("SO2 (µg/m³): ");
-        scanf("%f", &zona->semanas[numero_semana].dias[indice_dia].so2);
-        
-        printf("NO2 (µg/m³): ");
-        scanf("%f", &zona->semanas[numero_semana].dias[indice_dia].no2);
-        
-        printf("PM2.5 (µg/m³): ");
-        scanf("%f", &zona->semanas[numero_semana].dias[indice_dia].pm25);
+        leerCadenaSegura("Fecha (YYYY-MM-DD): ", zona->semanas[numero_semana].dias[indice_dia].fecha, 11);
+        zona->semanas[numero_semana].dias[indice_dia].co2 = leerFloatSeguro("CO2 (ppm): ", 0.0, 1.0);
+        zona->semanas[numero_semana].dias[indice_dia].so2 = leerFloatSeguro("SO2 (µg/m³): ", 0.0, 100.0);
+        zona->semanas[numero_semana].dias[indice_dia].no2 = leerFloatSeguro("NO2 (µg/m³): ", 0.0, 300.0);
+        zona->semanas[numero_semana].dias[indice_dia].pm25 = leerFloatSeguro("PM2.5 (µg/m³): ", 0.0, 500.0);
     }
     
     // Actualizar el número de semanas si es necesario
@@ -672,381 +729,67 @@ void cargarSemana(struct Zona *zona, int numero_semana) {
 }
 
 /**
- * Retorna el nivel de alerta para PM2.5 como cadena
-
-
+ * Guarda el estado actual de las semanas en un archivo
  */
-char* alertaPM25(float valor) {
-    if (valor <= OMS_PM25_BUENO) {
-        return "VERDE";
-    } else if (valor <= OMS_PM25_MODERADO) {
-        return "AMARILLA";
-    } else if (valor <= OMS_PM25_NO_SALUDABLE) {
-        return "NARANJA";
-    } else {
-        return "ROJA";
+void guardarSemanaActual(int semanaActual[], int numZonas) {
+    FILE *archivo = fopen("semanas_actuales.dat", "wb");
+    if (archivo) {
+        fwrite(&numZonas, sizeof(int), 1, archivo);
+        fwrite(semanaActual, sizeof(int), numZonas, archivo);
+        fclose(archivo);
     }
 }
 
 /**
- * Retorna el nivel de alerta para NO2 como cadena
-
-
+ * Carga el estado actual de las semanas desde un archivo
  */
-char* alertaNO2(float valor) {
-    if (valor <= OMS_NO2_BUENO) {
-        return "VERDE";
-    } else if (valor <= OMS_NO2_MODERADO) {
-        return "AMARILLA";
-    } else if (valor <= OMS_NO2_NO_SALUDABLE) {
-        return "NARANJA";
-    } else {
-        return "ROJA";
-    }
-}
-
-/**
- * Retorna el nivel de alerta para CO2 como cadena
-
-
-
- */
-char* alertaCO2(float valor, struct Umbral u) {
-    if (valor <= u.min) {
-        return "VERDE";
-    } else if (valor <= u.max) {
-        return "AMARILLA";
-    } else {
-        return "ROJA";
-    }
-}
-
-/**
- * Retorna el nivel de alerta para SO2 como cadena
-
-
-
- */
-char* alertaSO2(float valor, struct Umbral u) {
-    if (valor <= u.min) {
-        return "VERDE";
-    } else if (valor <= u.max) {
-        return "AMARILLA";
-    } else {
-        return "ROJA";
-    }
-}
-
-/**
- * Calcula el nivel de alerta para PM2.5 como entero
-
-
-
- */
-int calcularAlertaPM25(float valor, struct Umbral u) {
-    (void)u; // Suprimir warning de parámetro no usado
-    
-    if (valor <= OMS_PM25_BUENO) {
-        return 0; // VERDE
-    } else if (valor <= OMS_PM25_MODERADO) {
-        return 1; // AMARILLA
-    } else if (valor <= OMS_PM25_NO_SALUDABLE) {
-        return 2; // NARANJA
-    } else {
-        return 3; // ROJA
-    }
-}
-
-/**
- * Calcula el nivel de alerta para NO2 como entero
-
-
-
- */
-int calcularAlertaNO2(float valor, struct Umbral u) {
-    (void)u; // Suprimir warning de parámetro no usado
-    
-    if (valor <= OMS_NO2_BUENO) {
-        return 0; // VERDE
-    } else if (valor <= OMS_NO2_MODERADO) {
-        return 1; // AMARILLA
-    } else if (valor <= OMS_NO2_NO_SALUDABLE) {
-        return 2; // NARANJA
-    } else {
-        return 3; // ROJA
-    }
-}
-
-/**
- * Calcula el nivel de alerta para CO2 como entero
-
-
-
- */
-int calcularAlertaCO2(float valor, struct Umbral u) {
-    if (valor <= u.min) {
-        return 0; // VERDE
-    } else if (valor <= u.max) {
-        return 1; // AMARILLA
-    } else {
-        return 3; // ROJA
-    }
-}
-
-/**
- * Calcula el nivel de alerta para SO2 como entero
-
-
-
- */
-int calcularAlertaSO2(float valor, struct Umbral u) {
-    if (valor <= u.min) {
-        return 0; // VERDE
-    } else if (valor <= u.max) {
-        return 1; // AMARILLA
-    } else {
-        return 3; // ROJA
-    }
-}
-
-/**
- * Convierte un nivel numérico de alerta a su nombre correspondiente
-
-
- */
-char* nombreAlerta(int nivel) {
-    if (nivel == 0) {
-        return "VERDE";
-    } else if (nivel == 1) {
-        return "AMARILLA";
-    } else if (nivel == 2) {
-        return "NARANJA";
-    } else {
-        return "ROJA";
-    }
-}
-
-/**
- * Maneja la opción seleccionada del menú principal
-
-
- */
-void manejarOpcion(int opcion_seleccionada, struct Sistema *sistema) {
-    float promedios[4], prediccion[MAX_ZONAS];
-    char alertas[MAX_ALERTAS][64];
-    int numero_alertas;
-    
-    switch (opcion_seleccionada) {
-        case 1: // Inicializar sistema
-            if (confirmar("¿Seguro que desea inicializar el sistema? Se perderan los datos actuales.")) {
-                inicializarSistema(sistema);
-            } else {
-                printf("Operacion cancelada.\n");
-            }
-            break;
-            
-        case 2: // Cargar datos históricos
-            if (cargarDatosHistoricos(sistema, "datos_hist.dat")) {
-                printf("Datos cargados correctamente.\n");
-            } else {
-                printf("No se pudo cargar datos.\n");
-            }
-            break;
-            
-        case 3: // Mostrar datos actuales y promedios
-            mostrarTablaZonas(sistema);
-            calcularPromedios(sistema, promedios);
-            printf("Promedios: CO2=%.2f SO2=%.2f NO2=%.2f PM2.5=%.1f\n",
-                promedios[0], promedios[1], promedios[2], promedios[3]);
-            break;
-            
-        case 4: // Predecir contaminación 24h
-            predecirContaminacion(sistema, prediccion);
-            printf("Prediccion PM2.5 para 24h futuras:\n");
-            for (int indice_zona = 0; indice_zona < sistema->numZonas; indice_zona++) {
-                printf("%s: %.1f ug/m3\n", sistema->zonas[indice_zona].nombre, prediccion[indice_zona]);
-            }
-            // Registrar predicciones en archivo de texto
-            registrarPredicciones(sistema, prediccion);
-            printf("Predicciones registradas en predicciones.txt\n");
-            break;
-            
-        case 5: // Emitir alertas según límites OMS
-            predecirContaminacion(sistema, prediccion);
-            printf("Alertas y niveles ICA por zona:\n");
-            for (int indice_zona = 0; indice_zona < sistema->numZonas; indice_zona++) {
-                mostrar_alerta(prediccion[indice_zona], sistema->zonas[indice_zona].nombre);
-            }
-            // Registrar predicciones en archivo de texto
-            registrarPredicciones(sistema, prediccion);
-            break;
-            
-        case 6: // Mostrar recomendaciones
-            predecirContaminacion(sistema, prediccion);
-            emitirAlertas(sistema, prediccion, alertas, &numero_alertas);
-            generarRecomendaciones(alertas, numero_alertas);
-            // Registrar predicciones en archivo de texto
-            registrarPredicciones(sistema, prediccion);
-            printf("Predicciones registradas en predicciones.txt\n");
-            break;
-            
-        case 7: { // Ingresar nuevos datos manualmente
-            if (sistema->numZonas == 0) {
-                printf("No hay zonas cargadas. Cargue datos primero.\n");
-                break;
-            }
-            
-            printf("Ingreso manual de datos (c para cancelar):\n");
-            int indice_zona_seleccionada = leerEntero("Seleccione zona (0-4): ", 0, 4, 1);
-            
-            if (indice_zona_seleccionada < 0) {
-                break; // Usuario canceló
-            }
-            
-            // Solicitar datos de contaminantes
-            sistema->zonas[indice_zona_seleccionada].co2 = leerFloat("CO2 (ppm): ", MIN_CONTAMINANT, MAX_OTHER_CONTAMINANTS, 1);
-            sistema->zonas[indice_zona_seleccionada].so2 = leerFloat("SO2 (ppm): ", MIN_CONTAMINANT, MAX_OTHER_CONTAMINANTS, 1);
-            sistema->zonas[indice_zona_seleccionada].no2 = leerFloat("NO2 (ppm): ", MIN_CONTAMINANT, MAX_OTHER_CONTAMINANTS, 1);
-            sistema->zonas[indice_zona_seleccionada].pm25 = leerFloat("PM2.5 (ug/m3): ", MIN_CONTAMINANT, MAX_PM25, 1);
-            
-            // Solicitar condiciones ambientales
-            sistema->zonas[indice_zona_seleccionada].temperatura = leerFloat("Temperatura (C): ", MIN_TEMP, MAX_TEMP, 1);
-            sistema->zonas[indice_zona_seleccionada].viento = leerFloat("Viento (m/s): ", MIN_WIND, MAX_WIND, 1);
-            sistema->zonas[indice_zona_seleccionada].humedad = leerFloat("Humedad (%): ", MIN_HUMIDITY, MAX_HUMIDITY, 1);
-            
-            // Guardar datos actualizados
-            guardarDatos(sistema, "datos_hist.dat");
-            printf("Datos guardados correctamente.\n");
-            break;
+void cargarSemanaActual(int semanaActual[], int numZonas) {
+    FILE *archivo = fopen("semanas_actuales.dat", "rb");
+    if (archivo) {
+        int numZonasCargadas;
+        fread(&numZonasCargadas, sizeof(int), 1, archivo);
+        if (numZonasCargadas == numZonas) {
+            fread(semanaActual, sizeof(int), numZonas, archivo);
         }
-        
-        case 8: { // Exportar reportes
-            if (!confirmar("¿Desea exportar los reportes actuales?")) {
-                printf("Operacion cancelada.\n");
-                break;
-            }
+        fclose(archivo);
+    }
+}
+
+/**
+ * Carga los datos de las zonas desde sus archivos de checkpoint
+ */
+void cargarDatosZonas(struct Zona zonas[], int numZonas) {
+    for (int i = 0; i < numZonas; i++) {
+        // Buscar el archivo de checkpoint más reciente para esta zona
+        for (int semana = MAX_SEMANAS - 1; semana >= 0; semana--) {
+            char nombre_archivo[64];
+            sprintf(nombre_archivo, "%s_semana%d.dat", zonas[i].nombre, semana + 1);
             
-            predecirContaminacion(sistema, prediccion);
-            emitirAlertas(sistema, prediccion, alertas, &numero_alertas);
-            
-            FILE *archivo_reportes = fopen("reportes.dat", "w");
-            if (archivo_reportes) {
-                // Escribir alertas
-                for (int indice_alerta = 0; indice_alerta < numero_alertas; indice_alerta++) {
-                    fprintf(archivo_reportes, "%s\n", alertas[indice_alerta]);
-                }
+            FILE *archivo = fopen(nombre_archivo, "rb");
+            if (archivo) {
+                fread(&zonas[i].semanas[semana], sizeof(struct Semana), 1, archivo);
+                fclose(archivo);
                 
-                // Escribir recomendaciones
-                fprintf(archivo_reportes, "Recomendaciones:\n");
-                if (numero_alertas == 0) {
-                    fprintf(archivo_reportes, "No hay alertas. Calidad del aire aceptable.\n");
-                } else {
-                    for (int indice_alerta = 0; indice_alerta < numero_alertas; indice_alerta++) {
-                        fprintf(archivo_reportes, "- %s: Limite actividades al aire libre.\n", alertas[indice_alerta]);
-                    }
+                // Actualizar el número de semanas de la zona
+                if (semana >= zonas[i].numSemanas) {
+                    zonas[i].numSemanas = semana + 1;
                 }
-                
-                fclose(archivo_reportes);
-                printf("Reportes exportados correctamente.\n");
-            } else {
-                printf("No se pudo exportar reportes.\n");
             }
-            break;
         }
-        
-        case 9: // Salir
-            printf("Saliendo del sistema.\n");
-            break;
-            
-        case 10: // Ver historial de zonas
-            mostrarHistorialZonas();
-            break;
-            
-        case 11: // Ver detalle de una zona
-            mostrarDetalleZona(sistema);
-            break;
-            
-        case 12: // Buscar zona por nombre
-            buscarZonaPorNombre(sistema);
-            break;
-            
-        default:
-            printf("Opcion no valida.\n");
     }
-}
-
-/**
- * Muestra el menú principal del sistema con todas las opciones disponibles
- */
-void mostrarMenuPrincipal() {
-    printf("\n+-----------------------------------------------+\n");
-    printf("| Sistema Integral de Gestion y Prediccion Aire |\n");
-    printf("+-----------------------------------------------+\n");
-    printf("| 1. Inicializar sistema                        |\n");
-    printf("| 2. Cargar datos historicos                    |\n");
-    printf("| 3. Mostrar datos actuales y promedios         |\n");
-    printf("| 4. Predicir contaminacion 24h                 |\n");
-    printf("| 5. Emitir alertas segun limites OMS           |\n");
-    printf("| 6. Mostrar recomendaciones                    |\n");
-    printf("| 7. Ingresar nuevos datos manualmente          |\n");
-    printf("| 8. Exportar reportes                          |\n");
-    printf("| 9. Salir                                      |\n");
-    printf("| 10. Ver historial de zonas                    |\n");
-    printf("| 11. Ver detalle de una zona                   |\n");
-    printf("| 12. Buscar zona por nombre                    |\n");
-    printf("+-----------------------------------------------+\n");
-    printf("Presione 'h' para ayuda.\n");
-}
-
-/**
- * Limpia el buffer de entrada para evitar problemas con caracteres residuales
- */
-void limpiarBuffer() {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF) {
-        // Limpiar buffer
-    }
-}
-
-/**
- * Valida entrada numérica y convierte a float con rango específico
-
-
-
-
-
- */
-int validarEntradaNumerica(char *entrada, float *resultado, float min, float max) {
-    char *endptr;
-    float valor = strtof(entrada, &endptr);
-    
-    // Verificar si la conversión fue exitosa y está en rango
-    if (*endptr == '\0' && valor >= min && valor <= max) {
-        *resultado = valor;
-        return 1;
-    }
-    return 0;
 }
 
 /**
  * Configura las fechas de inicio para el sistema de registro automático
-
  */
 void configurarFechasInicio(struct ConfiguracionFechas *config) {
     printf("Configuracion de fechas de inicio para registro automatico\n");
     printf("=======================================================\n");
     
-    printf("Año de inicio (2020-2030): ");
-    config->anio_inicio = leerEntero("", 2020, 2030, 0);
-    
-    printf("Mes de inicio (1-12): ");
-    config->mes_inicio = leerEntero("", 1, 12, 0);
-    
-    printf("Dia de inicio (1-31): ");
-    config->dia_inicio = leerEntero("", 1, 31, 0);
-    
-    printf("¿Usar fechas automaticas para nuevos registros? (1=Si, 0=No): ");
-    config->usar_fechas_automaticas = leerEntero("", 0, 1, 0);
+    config->anio_inicio = leerEnteroSeguro("Año de inicio (2020-2030): ", 2020, 2030);
+    config->mes_inicio = leerEnteroSeguro("Mes de inicio (1-12): ", 1, 12);
+    config->dia_inicio = leerEnteroSeguro("Dia de inicio (1-31): ", 1, 31);
+    config->usar_fechas_automaticas = leerEnteroSeguro("¿Usar fechas automaticas para nuevos registros? (1=Si, 0=No): ", 0, 1);
     
     printf("Fecha de inicio configurada: %04d-%02d-%02d\n", 
            config->anio_inicio, config->mes_inicio, config->dia_inicio);
@@ -1063,9 +806,6 @@ void configurarFechasInicio(struct ConfiguracionFechas *config) {
 
 /**
  * Calcula una fecha automática basada en la configuración y días relativos
-
-
-
  */
 void calcularFechaAutomatica(struct ConfiguracionFechas *config, int dia_relativo, char *fecha_resultado) {
     // Días por mes (año no bisiesto)
@@ -1101,9 +841,6 @@ void calcularFechaAutomatica(struct ConfiguracionFechas *config, int dia_relativ
 
 /**
  * Versión mejorada del ingreso manual de datos con mejor validación y fechas automáticas
-
-
-
  */
 void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct ConfiguracionFechas *config) {
     if (semana >= MAX_SEMANAS) {
@@ -1133,8 +870,7 @@ void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct Configura
             printf("Fecha automatica: %s\n", zona->semanas[semana].dias[d].fecha);
         } else {
             char fecha_temp[12];
-            printf("Fecha (YYYY-MM-DD): ");
-            scanf("%11s", fecha_temp);
+            leerCadenaSegura("Fecha (YYYY-MM-DD): ", fecha_temp, 11);
             
             if (fecha_temp[0] == 'c' || fecha_temp[0] == 'C') {
                 printf("Ingreso cancelado.\n");
@@ -1151,8 +887,7 @@ void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct Configura
         
         // CO2
         while (1) {
-            printf("CO2 en ppm (0.000-1.000) o 'c' para cancelar: ");
-            scanf("%31s", entrada);
+            leerCadenaSegura("CO2 en ppm (0.0-1.0) o 'c' para cancelar: ", entrada, 31);
             
             if (entrada[0] == 'c' || entrada[0] == 'C') {
                 printf("Ingreso cancelado.\n");
@@ -1163,14 +898,13 @@ void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct Configura
                 zona->semanas[semana].dias[d].co2 = valor;
                 break;
             } else {
-                printf("Error: Valor invalido. Debe estar entre 0.000 y 1.000\n");
+                printf("Error: Valor invalido. Debe estar entre 0.0 y 1.0\n");
             }
         }
         
         // SO2
         while (1) {
-            printf("SO2 en ug/m3 (0.0-100.0) o 'c' para cancelar: ");
-            scanf("%31s", entrada);
+            leerCadenaSegura("SO2 en ug/m3 (0.0-100.0) o 'c' para cancelar: ", entrada, 31);
             
             if (entrada[0] == 'c' || entrada[0] == 'C') {
                 printf("Ingreso cancelado.\n");
@@ -1187,8 +921,7 @@ void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct Configura
         
         // NO2
         while (1) {
-            printf("NO2 en ug/m3 (0.0-300.0) o 'c' para cancelar: ");
-            scanf("%31s", entrada);
+            leerCadenaSegura("NO2 en ug/m3 (0.0-300.0) o 'c' para cancelar: ", entrada, 31);
             
             if (entrada[0] == 'c' || entrada[0] == 'C') {
                 printf("Ingreso cancelado.\n");
@@ -1205,8 +938,7 @@ void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct Configura
         
         // PM2.5
         while (1) {
-            printf("PM2.5 en ug/m3 (0.0-500.0) o 'c' para cancelar: ");
-            scanf("%31s", entrada);
+            leerCadenaSegura("PM2.5 en ug/m3 (0.0-500.0) o 'c' para cancelar: ", entrada, 31);
             
             if (entrada[0] == 'c' || entrada[0] == 'C') {
                 printf("Ingreso cancelado.\n");
@@ -1234,6 +966,31 @@ void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct Configura
 }
 
 /**
+ * Limpia el buffer de entrada para evitar problemas con caracteres residuales
+ */
+void limpiarBuffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF) {
+        // Limpiar buffer
+    }
+}
+
+/**
+ * Valida entrada numérica y convierte a float con rango específico
+ */
+int validarEntradaNumerica(char *entrada, float *resultado, float min, float max) {
+    char *endptr;
+    float valor = strtof(entrada, &endptr);
+    
+    // Verificar si la conversión fue exitosa y está en rango
+    if (*endptr == '\0' && valor >= min && valor <= max) {
+        *resultado = valor;
+        return 1;
+    }
+    return 0;
+}
+
+/**
  * Exporta una plantilla simple y fácil de usar para carga masiva
  * Solo requiere completar valores separados por comas
  */
@@ -1247,52 +1004,33 @@ void exportarPlantillaDatos(const char* nombreArchivo) {
     // Instrucciones súper simples
     fprintf(f, "PLANTILLA SIMPLE PARA DATOS AMBIENTALES\n");
     fprintf(f, "=======================================\n\n");
-    fprintf(f, "INSTRUCCIONES SIMPLES:\n");
-    fprintf(f, "1. Reemplace los numeros de ejemplo con sus datos reales\n");
-    fprintf(f, "2. NO cambie los nombres de las zonas\n");
-    fprintf(f, "3. Use punto (.) para decimales, NO coma\n");
-    fprintf(f, "4. Guarde el archivo y use 'Importar datos'\n\n");
+    fprintf(f, "Formato: Zona,Fecha,CO2,SO2,NO2,PM25\n");
+    fprintf(f, "- Zona: Quito, Cuenca, Guayaquil, Loja, Ambato\n");
+    fprintf(f, "- Fecha: YYYY-MM-DD\n");
+    fprintf(f, "- CO2: 0.0-1.0 (ppm)\n");
+    fprintf(f, "- SO2: 0.0-100.0 (ug/m³)\n");
+    fprintf(f, "- NO2: 0.0-300.0 (ug/m³)\n");
+    fprintf(f, "- PM25: 0.0-500.0 (ug/m³)\n\n");
     
-    fprintf(f, "FORMATO: Zona,Fecha,CO2,SO2,NO2,PM25\n");
-    fprintf(f, "EJEMPLO: Quito,2024-07-01,400.0,5.0,25.0,15.0\n\n");
-    
-    fprintf(f, "=== COPIE Y PEGUE SUS DATOS AQUI ===\n\n");
-    
-    // Datos súper simples de ejemplo para cada zona
-    const char* zonas[] = {"Quito", "Cuenca", "Guayaquil", "Loja", "Ambato"};
-    
-    for (int z = 0; z < 5; z++) {
-        fprintf(f, "# Datos para %s (reemplace con sus valores):\n", zonas[z]);
-        for (int d = 1; d <= 7; d++) {
-            fprintf(f, "%s,2024-07-%02d,400.0,5.0,25.0,15.0\n", zonas[z], d);
-        }
-        fprintf(f, "\n");
-    }
-    
-    fprintf(f, "\n=== VALORES DE REFERENCIA RAPIDA ===\n");
-    fprintf(f, "PM2.5 Bueno: 0-12\n");
-    fprintf(f, "PM2.5 Moderado: 12-35\n");
-    fprintf(f, "PM2.5 Malo: 35-55\n");
-    fprintf(f, "PM2.5 Muy Malo: 55+\n");
+    // Datos de ejemplo
+    fprintf(f, "# Datos de ejemplo - Reemplazar con valores reales\n");
+    fprintf(f, "Quito,2024-07-01,0.040,8.0,25.0,15.0\n");
+    fprintf(f, "Cuenca,2024-07-01,0.042,9.0,27.0,18.0\n");
+    fprintf(f, "Guayaquil,2024-07-01,0.045,12.0,30.0,22.0\n");
+    fprintf(f, "Loja,2024-07-01,0.037,7.0,23.0,13.0\n");
+    fprintf(f, "Ambato,2024-07-01,0.041,8.5,26.0,16.0\n");
     
     fclose(f);
     printf(ANSI_VERDE "Plantilla creada: %s\n" ANSI_RESET, nombreArchivo);
-    printf(ANSI_AMARILLO "\nPASOS SIMPLES:\n");
-    printf("1. Abra %s en Bloc de Notas\n", nombreArchivo);
-    printf("2. Cambie los numeros 400.0,5.0,25.0,15.0 por sus datos\n");
-    printf("3. Guarde el archivo\n");
-    printf("4. Use 'Importar datos' en el menu\n" ANSI_RESET);
 }
 
 /**
- * Importa datos de formato súper simple (CSV básico)
- * Solo requiere: Zona,Fecha,CO2,SO2,NO2,PM25
+ * Importa datos desde un archivo con formato: Zona,Fecha,CO2,SO2,NO2,PM25
  */
 int importarDatosDesdeArchivo(struct Zona zonas[], int numZonas, const char* nombreArchivo) {
     FILE *f = fopen(nombreArchivo, "r");
     if (!f) {
         printf(ANSI_ROJO "Error: No se pudo abrir %s\n" ANSI_RESET, nombreArchivo);
-        printf(ANSI_AMARILLO "Asegurese de que el archivo existe y esta en la carpeta correcta\n" ANSI_RESET);
         return 0;
     }
     
@@ -1300,24 +1038,51 @@ int importarDatosDesdeArchivo(struct Zona zonas[], int numZonas, const char* nom
     int importados = 0;
     int lineas_procesadas = 0;
     
-    printf(ANSI_VERDE "Importando datos...\n" ANSI_RESET);
+    printf(ANSI_AMARILLO "Importando datos desde %s...\n" ANSI_RESET, nombreArchivo);
     
     while (fgets(linea, sizeof(linea), f)) {
         lineas_procesadas++;
         
-        // Saltar líneas que no son datos (comentarios, headers, etc.)
-        if (linea[0] == '#' || linea[0] == '=' || linea[0] == '\n' || 
-            strstr(linea, "INSTRUCCIONES") || strstr(linea, "FORMATO") || 
-            strstr(linea, "EJEMPLO") || strstr(linea, "VALORES")) {
+        // Saltar líneas de comentario y líneas vacías
+        if (linea[0] == '#' || linea[0] == '\n' || linea[0] == '\r') {
             continue;
         }
         
-        // Leer datos en formato simple: Zona,Fecha,CO2,SO2,NO2,PM25
+        // Parsear línea manualmente para evitar problemas de compatibilidad
         char zona[32], fecha[12];
         float co2, so2, no2, pm25;
         
-        int leidos = sscanf(linea, "%31[^,],%11[^,],%f,%f,%f,%f", 
-                           zona, fecha, &co2, &so2, &no2, &pm25);
+        // Buscar las comas y extraer cada campo
+        char *ptr = linea;
+        char *coma;
+        int leidos = 0;
+        
+        // Extraer zona (hasta la primera coma)
+        coma = strchr(ptr, ',');
+        if (coma) {
+            int len = coma - ptr;
+            if (len > 31) len = 31;
+            strncpy(zona, ptr, len);
+            zona[len] = '\0';
+            ptr = coma + 1;
+            leidos++;
+            
+            // Extraer fecha (hasta la segunda coma)
+            coma = strchr(ptr, ',');
+            if (coma) {
+                len = coma - ptr;
+                if (len > 11) len = 11;
+                strncpy(fecha, ptr, len);
+                fecha[len] = '\0';
+                ptr = coma + 1;
+                leidos++;
+                
+                // Extraer los 4 valores numéricos
+                if (sscanf(ptr, "%f,%f,%f,%f", &co2, &so2, &no2, &pm25) == 4) {
+                    leidos = 6; // Total de campos leídos correctamente
+                }
+            }
+        }
         
         if (leidos == 6) {
             // Buscar la zona
@@ -1407,8 +1172,6 @@ int importarDatosDesdeArchivo(struct Zona zonas[], int numZonas, const char* nom
 
 /**
  * Guarda la configuración de fechas en un archivo dedicado
-
-
  */
 int guardarConfiguracionFechas(struct ConfiguracionFechas *config) {
     FILE *archivo = fopen("config_fechas.dat", "wb");
@@ -1427,8 +1190,6 @@ int guardarConfiguracionFechas(struct ConfiguracionFechas *config) {
 
 /**
  * Carga la configuración de fechas desde un archivo dedicado
-
-
  */
 int cargarConfiguracionFechas(struct ConfiguracionFechas *config) {
     FILE *archivo = fopen("config_fechas.dat", "rb");
