@@ -13,7 +13,7 @@
 #define ANSI_AZUL    "\x1b[34m"
 
 // Variable global para configuracion de fechas
-struct ConfiguracionFechas config_fechas = {2024, 1, 1, 1};
+struct ConfiguracionFechas config_fechas = {2025, 1, 1, 1};
 
 // Funcion para cargar o solicitar fecha inicial al usuario
 void cargarOSolicitarFechaInicial() {
@@ -33,24 +33,9 @@ void cargarOSolicitarFechaInicial() {
     
     printf(ANSI_AMARILLO "Primera ejecucion detectada.\n");
     printf("Por favor, ingrese la fecha actual del sistema:\n" ANSI_RESET);
-    printf("Anio (ej. 2024): ");
-    scanf("%d", &config_fechas.anio_inicio);
-    
-    printf("Mes (1-12): ");
-    scanf("%d", &config_fechas.mes_inicio);
-    
-    printf("Dia (1-31): ");
-    scanf("%d", &config_fechas.dia_inicio);
-    
-    // Validacion basica
-    if (config_fechas.mes_inicio < 1 || config_fechas.mes_inicio > 12) {
-        printf(ANSI_ROJO "Mes invalido, estableciendo enero.\n" ANSI_RESET);
-        config_fechas.mes_inicio = 1;
-    }
-    if (config_fechas.dia_inicio < 1 || config_fechas.dia_inicio > 31) {
-        printf(ANSI_ROJO "Dia invalido, estableciendo dia 1.\n" ANSI_RESET);
-        config_fechas.dia_inicio = 1;
-    }
+    config_fechas.anio_inicio = leerEnteroSeguro("Anio (ej. 2024): ", 1900, 2100);
+    config_fechas.mes_inicio = leerEnteroSeguro("Mes (1-12): ", 1, 12);
+    config_fechas.dia_inicio = leerEnteroSeguro("Dia (1-31): ", 1, 31);
     
     config_fechas.usar_fechas_automaticas = 1;
     
@@ -63,7 +48,7 @@ void cargarOSolicitarFechaInicial() {
 }
 
 // Prototipos exportados a funciones.c o funciones2.c
-void menuConfiguracion(struct Zona zonas[], int *numZonasPtr);
+void menuConfiguracion(struct Zona zonas[], int *numZonasPtr, int semanaActual[]);
 void menuIngresoManual(struct Zona zonas[], int numZonas, int semanaActual[]);
 void menuReportes(struct Zona zonas[], int numZonas);
 void menuCheckpoints(struct Zona zonas[], int numZonas, int semanaActual[]);
@@ -83,6 +68,12 @@ int main() {
     cargarOSolicitarFechaInicial();
 
     inicializarZonas(zonas, &numZonas);
+    
+    // Cargar datos existentes de las zonas desde checkpoints
+    cargarDatosZonas(zonas, numZonas);
+    
+    // Cargar el estado de las semanas actuales
+    cargarSemanaActual(semanaActual, numZonas);
 
     while (1) {
         printf(ANSI_NEGRITA ANSI_AZUL "\n+----------------------------------------------------------+\n");
@@ -96,11 +87,10 @@ int main() {
         printf("| 6. Salir                                                 |\n");
         printf("+----------------------------------------------------------+\n" ANSI_RESET);
         printf("Seleccione opcion: ");
-        int opcion;
-        scanf("%d", &opcion);
+        int opcion = leerEnteroSeguro("Seleccione una opcion: ", 1, 5);
 
         if (opcion == 1) {
-            menuConfiguracion(zonas, &numZonas);
+            menuConfiguracion(zonas, &numZonas, semanaActual);
         } else if (opcion == 2) {
             menuIngresoManual(zonas, numZonas, semanaActual);
         } else if (opcion == 3) {
@@ -116,6 +106,8 @@ int main() {
             }
             // Guardar configuración de fechas al salir
             guardarConfiguracionFechas(&config_fechas);
+            // Guardar estado de semanas actuales
+            guardarSemanaActual(semanaActual, numZonas);
             printf(ANSI_MAGENTA "Datos y configuracion guardados. Saliendo del sistema.\n" ANSI_RESET);
             break;
         } else {
