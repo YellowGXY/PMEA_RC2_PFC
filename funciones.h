@@ -9,6 +9,7 @@ struct Zona {
 struct Sistema {
     struct Zona zonas[MAX_ZONAS];
     int numZonas;
+    char fecha[11]; // YYYY-MM-DD
 };
 
 // Prototipos de funciones principales
@@ -26,3 +27,8 @@ int leerEntero(const char *prompt, int min, int max, int allowCancel);
 float leerFloat(const char *prompt, float min, float max, int allowCancel);
 int confirmar(const char *mensaje);
 void ayudaMenu(const char *menuNombre);
+void actualizarFechaManualmente(struct Sistema *s);
+// Funciones de ICA y alertas mejoradas
+char* calcularICA(float pm25);
+void mostrar_alerta(float pm25, char* zona);
+void registrarPredicciones(struct Sistema *s, float prediccion[]);
