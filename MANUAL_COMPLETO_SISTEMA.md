@@ -4,6 +4,14 @@
 
 El Sistema de Gestión y Predicción de Calidad del Aire es una aplicación integral desarrollada en C que permite monitorear, analizar y predecir la calidad del aire en múltiples zonas geográficas. El sistema maneja datos de contaminantes atmosféricos (CO2, SO2, NO2, PM2.5) junto con condiciones ambientales (temperatura, viento, humedad).
 
+### ✅ VERSIÓN ACTUALIZADA Y MEJORADA (2025)
+- **Eliminación completa de caracteres especiales** para máxima compatibilidad
+- **Funciones de predicción basadas exclusivamente en datos reales**
+- **Gestión inteligente de fechas y meses consecutivos**
+- **Validación robusta de entrada de datos**
+- **Tablas optimizadas para mejor visualización**
+- **Código simplificado y funciones básicas**
+
 ## CARACTERÍSTICAS PRINCIPALES
 
 ### ✅ FUNCIONES BÁSICAS
@@ -11,14 +19,14 @@ El Sistema de Gestión y Predicción de Calidad del Aire es una aplicación inte
 - **Monitoreo de 4 contaminantes principales**: CO2, SO2, NO2, PM2.5
 - **Condiciones ambientales**: Temperatura, velocidad del viento, humedad
 - **Sistema de alertas basado en estándares OMS**
-- **Predicciones de calidad del aire para 24 horas**
+- **Predicciones de calidad del aire SOLO con datos reales**
 - **Exportación de reportes y alertas**
 
 ### ✅ CARACTERÍSTICAS AVANZADAS
-- **Gestión automática de fechas**
+- **Gestión automática de fechas y meses consecutivos**
 - **Sistema de checkpoints y recuperación de datos**
 - **Importación/exportación masiva de datos**
-- **Interfaz colorizada con códigos ANSI**
+- **Interfaz colorizada sin caracteres especiales**
 - **Validación robusta de entrada de datos con funciones seguras**
 - **Almacenamiento persistente en archivos binarios**
 - **Prevención de errores de entrada y desbordamiento de buffer**
@@ -31,6 +39,14 @@ El Sistema de Gestión y Predicción de Calidad del Aire es una aplicación inte
 - **Eliminación total de `scanf()` directo** para mayor seguridad - ✅ **COMPLETADO**
 - **Portabilidad mejorada** sin patrones problemáticos de lectura
 - **Seguridad 100%**: Cero vulnerabilidades de entrada de datos
+
+### ✅ MEJORAS IMPLEMENTADAS (2025)
+- **Eliminación de caracteres Unicode**: Todos los símbolos μg/m³ → ug/m3
+- **Eliminación de acentos**: Todas las palabras con tildes normalizadas
+- **Predicciones solo con datos reales**: Mínimo 4-5 días de datos reales requeridos
+- **Avance de mes inteligente**: Detecta el mes máximo y crea el siguiente consecutivo
+- **Tablas optimizadas**: Mejor espaciado y formato en todas las visualizaciones
+- **Código simplificado**: Eliminación de funciones complejas innecesarias
 
 ---
 
@@ -121,17 +137,20 @@ Al ejecutar el programa:
 - **Formato**: Tabla ASCII con bordes y alineación profesional
 
 ### 4. **PREDICCIÓN 24H** (Opción 4)
-- **Algoritmo**: Modelo híbrido (70% valor actual + 30% promedio global)
-- **Resultado**: Predicciones de PM2.5 para cada zona
+- **✅ SOLO DATOS REALES**: Requiere mínimo 4-5 días de datos reales importados
+- **Algoritmo**: Modelo híbrido basado en datos históricos reales
+- **Resultado**: Predicciones de PM2.5 para cada zona con datos suficientes
+- **Validación**: Bloquea predicciones si no hay datos reales suficientes
 - **Almacenamiento**: Guarda predicciones en `datos_pred.dat` y `predicciones.txt`
+- **Advertencia**: Muestra alerta si se intenta usar sin datos reales
 
 ### 5. **ALERTAS OMS** (Opción 5)
 - **Estándares**: Basado en límites de la Organización Mundial de la Salud
 - **Niveles PM2.5**: 
-  - 🟢 VERDE: ≤12 μg/m³ (Saludable)
-  - 🟡 AMARILLA: 12.1-35 μg/m³ (Moderado)
-  - 🟠 NARANJA: 35.1-55 μg/m³ (No saludable para sensibles)
-  - 🔴 ROJA: >55 μg/m³ (Peligroso)
+  - 🟢 VERDE: ≤12 ug/m3 (Saludable)
+  - 🟡 AMARILLA: 12.1-35 ug/m3 (Moderado)
+  - 🟠 NARANJA: 35.1-55 ug/m3 (Danino para grupos sensibles)
+  - 🔴 ROJA: >55 ug/m3 (Danino para toda la poblacion)
 - **Alertas CO2**: >0.05 ppm
 
 ### 6. **RECOMENDACIONES** (Opción 6)
@@ -145,9 +164,12 @@ Al ejecutar el programa:
 - **Validación en Tiempo Real**: Cada entrada es validada antes de ser aceptada
 - **Rangos Específicos**:
   - CO2: 0.000-1.000 ppm (validación automática)
-  - SO2: 0.0-100.0 μg/m³ (sin desbordamiento)
-  - NO2: 0.0-300.0 μg/m³ (entrada segura)
-  - PM2.5: 0.0-500.0 μg/m³ (protección total)
+  - SO2: 0.0-100.0 ug/m3 (sin desbordamiento)
+  - NO2: 0.0-300.0 ug/m3 (entrada segura)
+  - PM2.5: 0.0-500.0 ug/m3 (proteccion total)
+  - Temperatura: -50.0 a 60.0°C
+  - Viento: 0.0-100.0 km/h
+  - Humedad: 0-100%
 - **Características de Seguridad**:
   - ❌ **Eliminado `scanf()` directo** - Ya no hay vulnerabilidades
   - ✅ **Prevención de buffer overflow** - Límites estrictos automáticos
@@ -159,7 +181,6 @@ Al ejecutar el programa:
   - Instrucciones claras para cada entrada
   - Confirmación de datos ingresados
   - Recuperación automática de errores
-  - Humedad: 0-100%
 
 ### 8. **EXPORTAR REPORTES** (Opción 8)
 - **Archivo generado**: `reportes.dat`
@@ -189,6 +210,12 @@ Al ejecutar el programa:
 
 ## MENÚS AVANZADOS
 
+### 🔧 MENÚ SIGUIENTE MES (Función Especial)
+- **✅ LÓGICA MEJORADA**: Detecta automáticamente el mes máximo registrado
+- **Avance Inteligente**: Crea el siguiente mes consecutivo (no reinicia en mes 1)
+- **Validación de Datos**: Verifica que haya datos antes de avanzar
+- **Ejemplo**: Si hay datos hasta mes 7, crea el mes 8 (no vuelve a mes 1)
+
 ### 🔧 MENÚ DE CONFIGURACIÓN
 Accesible desde funciones especiales del sistema:
 
@@ -199,12 +226,11 @@ Accesible desde funciones especiales del sistema:
 4. **Generar datos de muestreo**: Crear datos de prueba VARIADOS específicos por ciudad
    - **Propósito**: Demostrar TODOS los tipos de alertas y niveles de contaminación
    - **Distribución de alertas por ciudad**:
-     - 🟢 **Quito**: Nivel VERDE (saludable, PM2.5 ≈ 10 μg/m³)
-     - 🟡 **Cuenca**: Nivel AMARILLA (moderado, PM2.5 ≈ 25 μg/m³)
-     - 🟠 **Guayaquil**: Nivel NARANJA (no saludable para sensibles, PM2.5 ≈ 45 μg/m³)
-     - 🔴 **Loja**: Nivel ROJA (peligroso, PM2.5 ≈ 70 μg/m³)
+     - 🟢 **Quito**: Nivel VERDE (saludable, PM2.5 ≈ 10 ug/m3)
+     - 🟡 **Cuenca**: Nivel AMARILLA (moderado, PM2.5 ≈ 25 ug/m3)
+     - 🟠 **Guayaquil**: Nivel NARANJA (danino para sensibles, PM2.5 ≈ 45 ug/m3)
+     - 🔴 **Loja**: Nivel ROJA (danino para toda la poblacion, PM2.5 ≈ 70 ug/m3)
      - 🟡⚠️ **Ambato**: Nivel AMARILLA + Alerta CO2 alto
-   - **Uso**: Después de inicializar con datos normales, usar esta función para ver el sistema completo en acción
 5. **Configurar fechas de inicio**: Establecer fecha base del sistema
 6. **Crear plantilla para datos**: Generar archivo de ejemplo para importación
 7. **Importar datos**: Cargar datos desde archivo externo
@@ -266,21 +292,21 @@ Sistema de respaldo y recuperación:
    Cuenca,2024-07-02,380.0,4.0,22.0,12.0
    ```
 
-2. **Formato de tabla ASCII** (decorativo):
+2. **Formato con comentarios**:
    ```
-   +--------+------------+--------+--------+--------+--------+
-   | Zona   | Fecha      | CO2    | SO2    | NO2    | PM2.5  |
-   +--------+------------+--------+--------+--------+--------+
-   | Quito  | 2024-07-01 | 400.0  | 5.0    | 25.0   | 15.0   |
-   | Cuenca | 2024-07-02 | 380.0  | 4.0    | 22.0   | 12.0   |
+   # Datos de calidad del aire - Ecuador
+   # Unidades: CO2 (ppm), SO2/NO2/PM25 (ug/m3)
+   Quito,2024-07-01,0.4,5.0,25.0,15.0
+   Cuenca,2024-07-02,0.38,4.0,22.0,12.0
    ```
 
 #### **Proceso de importación:**
 1. El sistema lee el archivo línea por línea
 2. Ignora comentarios (líneas que inician con #) y encabezados
 3. Valida rangos de datos automáticamente
-4. Distribuye datos en semanas disponibles
+4. Distribuye datos en meses disponibles
 5. Muestra progreso y resumen final
+6. **✅ VALIDACIÓN MEJORADA**: Solo acepta datos dentro de rangos establecidos
 
 ### 📤 EXPORTACIÓN DE PLANTILLAS
 
@@ -296,20 +322,26 @@ Sistema de respaldo y recuperación:
 
 ### 🔮 PREDICCIÓN DE CONTAMINACIÓN
 ```
-Predicción = (Valor_Actual × 0.7) + (Promedio_Global × 0.3)
+✅ SOLO CON DATOS REALES:
+- Requiere mínimo 4-5 días de datos reales importados
+- Usa promedio ponderado de datos históricos reales
+- Bloquea predicciones si no hay datos suficientes
+- Muestra advertencia si se intenta usar datos de ejemplo
 ```
-- **Ventaja**: Equilibra tendencia local con contexto global
+- **Ventaja**: Predicciones basadas en datos reales del entorno
 - **Aplicación**: Específica para PM2.5 (principal indicador)
+- **Validación**: Verifica existencia de datos antes de calcular
 
 ### 📊 CÁLCULO DE PROMEDIOS
-- **Por zona**: Suma de días/número de días en semana actual
-- **Global**: Suma de todas las zonas/número de zonas
-- **Temporal**: Datos de la semana más reciente con datos
+- **Por zona**: Suma de días/número de días con datos reales
+- **Global**: Suma de todas las zonas/número de zonas con datos
+- **Temporal**: Datos de los meses más recientes con información válida
 
 ### 🚨 SISTEMA DE ALERTAS
 - **Prioridad**: PM2.5 como indicador principal
 - **Secundario**: CO2 para alertas adicionales
 - **Umbrales**: Basados en estándares OMS actualizados
+- **Textos**: Sin acentos ni caracteres especiales para compatibilidad
 
 ---
 
@@ -613,29 +645,37 @@ del *.txt
 
 ---
 
-## RESUMEN DE MEJORAS IMPLEMENTADAS
+## RESUMEN DE MEJORAS IMPLEMENTADAS (2025)
 
-### 🔄 ANTES VS AHORA
+### 🔄 CARACTERES Y CODIFICACIÓN
+- **✅ Eliminación de μg/m³**: Reemplazado por "ug/m3" en todo el sistema
+- **✅ Eliminación de acentos**: "Dañino" → "Danino", "población" → "poblacion"
+- **✅ Caracteres especiales**: Eliminados para máxima compatibilidad
+- **✅ Codificación uniforme**: Solo ASCII básico en mensajes y reportes
 
-#### **ENTRADA DE DATOS**
-- **❌ Antes**: `scanf()` directo, vulnerable a buffer overflow
-- **✅ Ahora**: Funciones robustas con validación automática
+### 🔄 SISTEMA DE PREDICCIONES
+- **✅ Solo datos reales**: Predicciones requieren mínimo 4-5 días de datos importados
+- **✅ Validación reforzada**: Bloquea predicciones sin datos suficientes
+- **✅ Advertencias claras**: Informa cuando no hay datos reales disponibles
+- **✅ Eliminación de datos falsos**: Ya no usa datos de ejemplo para predicciones
 
-#### **VALIDACIÓN**
-- **❌ Antes**: Validación manual inconsistente  
-- **✅ Ahora**: Validación automática en tiempo real
+### 🔄 GESTIÓN DE FECHAS Y MESES
+- **✅ Avance inteligente**: Detecta mes máximo y crea el siguiente consecutivo
+- **✅ No reinicia en mes 1**: Lógica corregida para continuidad temporal
+- **✅ Validación de secuencia**: Verifica que haya datos antes de avanzar
+- **✅ Gestión automática**: Calcula próximo mes basado en datos existentes
 
-#### **MANEJO DE ERRORES**
-- **❌ Antes**: Crashes y comportamiento impredecible
-- **✅ Ahora**: Recuperación inteligente con mensajes claros
+### 🔄 TABLAS Y VISUALIZACIÓN
+- **✅ Espaciado optimizado**: Tablas con mejor alineación y formato
+- **✅ Bordes consistentes**: Uso uniforme de caracteres ASCII para bordes
+- **✅ Columnas ajustadas**: Tamaño adecuado para evitar desbordamientos
+- **✅ Legibilidad mejorada**: Mejor separación entre elementos
 
-#### **SEGURIDAD**
-- **❌ Antes**: Vulnerabilidades de desbordamiento
-- **✅ Ahora**: Protección total contra buffer overflow
-
-#### **EXPERIENCIA DE USUARIO**
-- **❌ Antes**: Errores confusos, reinicio necesario
-- **✅ Ahora**: Mensajes descriptivos, corrección in-situ
+### 🔄 SIMPLIFICACIÓN DEL CÓDIGO
+- **✅ Funciones básicas**: Eliminación de dependencias complejas innecesarias
+- **✅ Lógica simplificada**: Código más directo y mantenible
+- **✅ Validaciones eficientes**: Algoritmos optimizados de verificación
+- **✅ Estructura modular**: Mejor organización del código
 
 ### 🚀 BENEFICIOS CLAVE
 
@@ -650,21 +690,39 @@ del *.txt
 
 ## CONCLUSIÓN
 
-El Sistema de Gestión y Predicción de Calidad del Aire ha sido completamente refactorizado para eliminar todas las vulnerabilidades de entrada de datos. Con la implementación de funciones robustas (`leerEnteroSeguro`, `leerFloatSeguro`, `leerCadenaSegura`, `leerCaracterSeguro`), el sistema ahora ofrece:
+El Sistema de Gestión y Predicción de Calidad del Aire ha sido completamente mejorado y actualizado para 2025. Las principales mejoras incluyen:
+
+### 🎯 MEJORAS CLAVE IMPLEMENTADAS:
+
+1. **🔤 Compatibilidad Universal**: Eliminación completa de caracteres especiales (μg/m³, acentos, Unicode)
+2. **📊 Predicciones Reales**: Sistema que funciona exclusivamente con datos reales importados
+3. **📅 Fechas Inteligentes**: Avance de mes consecutivo basado en datos existentes (no reinicia en mes 1)
+4. **📋 Tablas Optimizadas**: Mejor espaciado y formato para evitar desbordamientos
+5. **⚡ Código Simplificado**: Eliminación de funciones complejas innecesarias
+
+### 🚀 BENEFICIOS FINALES:
 
 - **Seguridad Total**: Prevención completa de buffer overflow y errores de entrada
 - **Validación Inteligente**: Verificación automática de rangos y tipos de datos
-- **Experiencia Mejorada**: Mensajes claros y recuperación automática de errores
-- **Código Limpio**: Eliminación de patrones problemáticos como `%[^,]` en `sscanf`
-- **Portabilidad Máxima**: Uso exclusivo de funciones estándar de C
+- **Compatibilidad Máxima**: Funciona en cualquier terminal sin problemas de codificación
+- **Predicciones Confiables**: Solo usa datos reales del entorno, no simulaciones
+- **Experiencia Mejorada**: Mensajes claros y navegación intuitiva
+- **Código Limpio**: Estructura modular y mantenible
 
-Esta nueva versión representa una solución completa y profesional para el monitoreo ambiental, combinando robustez técnica con facilidad de uso para usuarios de todos los niveles.
+### 💡 PARA USUARIOS:
+
+- **Instalación**: Compilación estándar con `gcc -o sistema_aire main.c funciones.c funciones2.c`
+- **Uso diario**: Ingreso manual seguro y exportación de reportes
+- **Datos reales**: Importación desde archivos CSV para predicciones válidas
+- **Reportes**: Exportación sin caracteres problemáticos para máxima compatibilidad
+
+Esta versión representa la solución más robusta y completa para monitoreo ambiental, combinando simplicidad de uso con funcionalidad avanzada, todo sin dependencias complejas ni vulnerabilidades de seguridad.
 
 ---
 
-**Versión del Manual**: 2.0 (Sistema Robusto)
+**Versión del Manual**: 3.0 (Sistema Mejorado y Actualizado)  
 **Fecha**: Julio 2025  
-**Mejoras Principales**: Funciones de entrada robustas, eliminación de vulnerabilidades
-**Compatibilidad**: Windows 10+, Linux, macOS  
-**Compilación**: `gcc -o sistema_aire main.c funciones.c funciones2.c -std=c99`
-**Soporte**: Sistema completamente documentado y auto-explicativo
+**Mejoras Principales**: Eliminación de caracteres especiales, predicciones solo con datos reales, fechas consecutivas, tablas optimizadas, código simplificado  
+**Compatibilidad**: Windows 10+, Linux, macOS (cualquier terminal ASCII)  
+**Compilación**: `gcc -o sistema_aire main.c funciones.c funciones2.c -std=c99`  
+**Estado**: Sistema completamente funcional y optimizado

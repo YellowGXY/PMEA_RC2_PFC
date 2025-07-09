@@ -48,21 +48,19 @@ void cargarOSolicitarFechaInicial() {
 }
 
 // Prototipos exportados a funciones.c o funciones2.c
-void menuConfiguracion(struct Zona zonas[], int *numZonasPtr, int semanaActual[]);
-void menuIngresoManual(struct Zona zonas[], int numZonas, int semanaActual[]);
+void menuConfiguracion(struct Zona zonas[], int *numZonasPtr, int mesActual[]);
+void menuIngresoManual(struct Zona zonas[], int numZonas, int mesActual[]);
 void menuReportes(struct Zona zonas[], int numZonas);
-void menuCheckpoints(struct Zona zonas[], int numZonas, int semanaActual[]);
-void menuSiguienteSemana(struct Zona zonas[], int numZonas, int semanaActual[]);
-void guardarSemana(struct Zona *zona, int semana);
+void menuCheckpoints(struct Zona zonas[], int numZonas, int mesActual[]);
+void menuSiguienteMes(struct Zona zonas[], int numZonas, int mesActual[]);
+void menuPronosticos(struct Zona zonas[], int numZonas, int mesActual[]);
+void guardarMes(struct Zona *zona, int mes);
 void inicializarZonas(struct Zona zonas[], int *numZonas);
-
-int g_max_semanas = MAX_SEMANAS;
-int g_max_dias_semana = MAX_DIAS_SEMANA;
 
 int main() {
     struct Zona zonas[MAX_ZONAS];
     int numZonas = MAX_ZONAS;
-    int semanaActual[MAX_ZONAS] = {0};
+    int mesActual[MAX_ZONAS] = {0};
 
     // Cargar configuración de fechas o solicitarla si es la primera vez
     cargarOSolicitarFechaInicial();
@@ -72,8 +70,15 @@ int main() {
     // Cargar datos existentes de las zonas desde checkpoints
     cargarDatosZonas(zonas, numZonas);
     
-    // Cargar el estado de las semanas actuales
-    cargarSemanaActual(semanaActual, numZonas);
+    // Cargar el estado de los meses actuales
+    cargarMesActual(mesActual, numZonas);
+    
+    // Ajustar mes actual basado en la fecha del sistema
+    ajustarMesActualSegunFecha(mesActual, numZonas);
+
+    // Mostrar información de inicio
+    printf(ANSI_VERDE "Sistema iniciado en el mes: %d (basado en fecha actual: %02d/%02d/%d)\n" ANSI_RESET,
+           mesActual[0] + 1, config_fechas.dia_inicio, config_fechas.mes_inicio, config_fechas.anio_inicio);
 
     while (1) {
         printf(ANSI_NEGRITA ANSI_AZUL "\n+----------------------------------------------------------+\n");
@@ -82,32 +87,35 @@ int main() {
         printf("| 1. Configuracion                                         |\n");
         printf("| 2. Ingreso manual de datos                               |\n");
         printf("| 3. Reportes                                              |\n");
-        printf("| 4. Checkpoints (guardar/recuperar semana)                |\n");
-        printf("| 5. Siguiente semana                                      |\n");
-        printf("| 6. Salir                                                 |\n");
+        printf("| 4. Checkpoints (guardar/recuperar mes)                   |\n");
+        printf("| 5. Siguiente mes                                         |\n");
+        printf("| 6. Pronosticos de calidad del aire                       |\n");
+        printf("| 7. Salir                                                 |\n");
         printf("+----------------------------------------------------------+\n" ANSI_RESET);
-        printf("Seleccione opcion: ");
-        int opcion = leerEnteroSeguro("Seleccione una opcion: ", 1, 5);
+        
+        int opcion = leerEnteroSeguro("Seleccione una opcion: ", 1, 7);
 
         if (opcion == 1) {
-            menuConfiguracion(zonas, &numZonas, semanaActual);
+            menuConfiguracion(zonas, &numZonas, mesActual);
         } else if (opcion == 2) {
-            menuIngresoManual(zonas, numZonas, semanaActual);
+            menuIngresoManual(zonas, numZonas, mesActual);
         } else if (opcion == 3) {
             menuReportes(zonas, numZonas);
         } else if (opcion == 4) {
-            menuCheckpoints(zonas, numZonas, semanaActual);
+            menuCheckpoints(zonas, numZonas, mesActual);
         } else if (opcion == 5) {
-            menuSiguienteSemana(zonas, numZonas, semanaActual);
+            menuSiguienteMes(zonas, numZonas, mesActual);
         } else if (opcion == 6) {
-            // Guardar todas las semanas antes de salir
+            menuPronosticos(zonas, numZonas, mesActual);
+        } else if (opcion == 7) {
+            // Guardar todos los meses antes de salir
             for (int i = 0; i < numZonas; i++) {
-                guardarSemana(&zonas[i], semanaActual[i]);
+                guardarMes(&zonas[i], mesActual[i]);
             }
             // Guardar configuración de fechas al salir
             guardarConfiguracionFechas(&config_fechas);
-            // Guardar estado de semanas actuales
-            guardarSemanaActual(semanaActual, numZonas);
+            // Guardar estado de meses actuales
+            guardarMesActual(mesActual, numZonas);
             printf(ANSI_MAGENTA "Datos y configuracion guardados. Saliendo del sistema.\n" ANSI_RESET);
             break;
         } else {

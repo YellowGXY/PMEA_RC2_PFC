@@ -41,11 +41,11 @@ void inicializarZonas(struct Zona zonas[], int *numero_zonas) {
         // Copiar nombre de forma segura
         strncpy(zonas[indice_zona].nombre, nombres[indice_zona], MAX_NOMBRE_ZONA-1);
         zonas[indice_zona].nombre[MAX_NOMBRE_ZONA-1] = 0;
-        zonas[indice_zona].numSemanas = 0;
+        zonas[indice_zona].numMeses = 0;
         
-        // Inicializar todas las semanas a cero
-        for (int indice_semana = 0; indice_semana < MAX_SEMANAS; indice_semana++) {
-            zonas[indice_zona].semanas[indice_semana].numDias = 0;
+        // Inicializar todos los meses a cero
+        for (int indice_mes = 0; indice_mes < MAX_MESES; indice_mes++) {
+            zonas[indice_zona].meses[indice_mes].numDias = 0;
         }
         
         // Establecer umbrales por defecto basados en estándares internacionales
@@ -64,11 +64,11 @@ void inicializarZonas(struct Zona zonas[], int *numero_zonas) {
  * Inicializa la configuracion de fechas con valores por defecto
  */
 void inicializarConfiguracionFechas(struct ConfiguracionFechas *config) {
-    // Configuracion por defecto: año actual, enero 1
+    // Configuracion por defecto: anio actual, enero 1
     config->anio_inicio = 2025;
     config->mes_inicio = 1;
     config->dia_inicio = 1;
-    config->usar_fechas_automaticas = 1; // Por defecto usar fechas automáticas
+    config->usar_fechas_automaticas = 1; // Por defecto usar fechas automaticas
 }
 
 /**
@@ -177,8 +177,13 @@ void calcularPromedios(struct Sistema *sistema, float promedios[]) {
 /**
  * Predice la contaminacion para las proximas 24 horas usando un modelo ponderado
  * Guarda las predicciones en el array prediccion
+ * NOTA: Esta función está obsoleta y solo se mantiene para compatibilidad
+ * Se recomienda usar las funciones de pronóstico basadas en datos reales del menú de pronósticos
  */
 void predecirContaminacion(struct Sistema *sistema, float prediccion[]) {
+    printf(ANSI_AMARILLO "ADVERTENCIA: Esta función usa datos de ejemplo del sistema básico.\n" ANSI_RESET);
+    printf(ANSI_AMARILLO "Para pronósticos con datos reales, use: Menu Principal > Reportes > Pronósticos\n" ANSI_RESET);
+    
     float promedios[4];
     calcularPromedios(sistema, promedios);
     float pm_promedio = promedios[3]; // Promedio global de PM2.5
@@ -189,8 +194,9 @@ void predecirContaminacion(struct Sistema *sistema, float prediccion[]) {
         prediccion[indice_zona] = sistema->zonas[indice_zona].pm25 * 0.7f + pm_promedio * 0.3f;
     }
     
-    // Guardar predicciones en archivo binario para análisis posterior
-    FILE *archivo = fopen("datos_pred.dat", "wb");
+    // Guardar predicciones en archivo binario para analisis posterior
+    crearCarpetaSistema();
+    FILE *archivo = fopen("sistema_archivos\\datos_pred.dat", "wb");
     if (archivo) {
         fwrite(prediccion, sizeof(float), sistema->numZonas, archivo);
         fclose(archivo);
@@ -206,7 +212,7 @@ void emitirAlertas(struct Sistema *sistema, float prediccion[], char alertas[][6
     
     // Verificar cada zona para detectar niveles peligrosos
     for (int indice_zona = 0; indice_zona < sistema->numZonas; indice_zona++) {
-        // Alerta por PM2.5 alto (límite OMS: 35 µg/m³)
+        // Alerta por PM2.5 alto (limite OMS: 35 ug/m3)
         if (prediccion[indice_zona] > OMS_PM25_MODERADO) {
             snprintf(alertas[*numero_alertas], 64, "Alerta: %s PM2.5 > 35 ug/m3", sistema->zonas[indice_zona].nombre);
             (*numero_alertas)++;
@@ -422,7 +428,7 @@ void leerCadenaSegura(const char *mensaje, char *destino, int tamano_max) {
         }
         
         // Verificar longitud
-        if (len > 0 && len < tamano_max) {
+        if (len > 0 && len < (size_t)tamano_max) {
             strcpy(destino, buffer);
             return;
         }
@@ -440,7 +446,7 @@ void leerCadenaSegura(const char *mensaje, char *destino, int tamano_max) {
  */
 void mostrarHistorialZonas() {
     struct Sistema sistema;
-    FILE *archivo = fopen("datos_hist.dat", "rb");
+    FILE *archivo = fopen("sistema_archivos\\datos_hist.dat", "rb");
     
     if (!archivo) {
         printf("No hay historial disponible.\n");
@@ -587,7 +593,8 @@ void mostrar_alerta(float pm25, char* zona) {
 
  */
 void registrarPredicciones(struct Sistema *sistema, float prediccion[]) {
-    FILE *archivo_predicciones = fopen("predicciones.txt", "a");
+    crearCarpetaSistema();
+    FILE *archivo_predicciones = fopen("sistema_archivos\\predicciones.txt", "a");
     
     if (!archivo_predicciones) {
         return; // No se pudo abrir el archivo
@@ -611,7 +618,7 @@ void registrarPredicciones(struct Sistema *sistema, float prediccion[]) {
  */
 void menuConfiguracionZona(struct Zona zonas[], int numero_zonas) {
     char mensaje[64];
-    sprintf(mensaje, "Seleccione zona (0-%d): ", numero_zonas-1);
+    snprintf(mensaje, sizeof(mensaje), "Seleccione zona (0-%d): ", numero_zonas-1);
     int indice_zona_seleccionada = leerEnteroSeguro(mensaje, 0, numero_zonas-1);
     
     if (indice_zona_seleccionada >= 0 && indice_zona_seleccionada < numero_zonas) {
@@ -633,14 +640,14 @@ void editarUmbrales(struct Umbrales *umbrales) {
     umbrales->co2.min = leerFloatSeguro("CO2 minimo (ppm): ", 0.0, 10000.0);
     umbrales->co2.max = leerFloatSeguro("CO2 maximo (ppm): ", umbrales->co2.min, 10000.0);
     
-    umbrales->so2.min = leerFloatSeguro("SO2 minimo (µg/m³): ", 0.0, 1000.0);
-    umbrales->so2.max = leerFloatSeguro("SO2 maximo (µg/m³): ", umbrales->so2.min, 1000.0);
+    umbrales->so2.min = leerFloatSeguro("SO2 minimo (ug/m3): ", 0.0, 1000.0);
+    umbrales->so2.max = leerFloatSeguro("SO2 maximo (ug/m3): ", umbrales->so2.min, 1000.0);
     
-    umbrales->no2.min = leerFloatSeguro("NO2 minimo (µg/m³): ", 0.0, 1000.0);
-    umbrales->no2.max = leerFloatSeguro("NO2 maximo (µg/m³): ", umbrales->no2.min, 1000.0);
+    umbrales->no2.min = leerFloatSeguro("NO2 minimo (ug/m3): ", 0.0, 1000.0);
+    umbrales->no2.max = leerFloatSeguro("NO2 maximo (ug/m3): ", umbrales->no2.min, 1000.0);
     
-    umbrales->pm25.min = leerFloatSeguro("PM2.5 minimo (µg/m³): ", 0.0, 500.0);
-    umbrales->pm25.max = leerFloatSeguro("PM2.5 maximo (µg/m³): ", umbrales->pm25.min, 500.0);
+    umbrales->pm25.min = leerFloatSeguro("PM2.5 minimo (ug/m3): ", 0.0, 500.0);
+    umbrales->pm25.max = leerFloatSeguro("PM2.5 maximo (ug/m3): ", umbrales->pm25.min, 500.0);
 }
 
 /**
@@ -674,9 +681,9 @@ void ingresarDatosManualSemana(struct Zona *zona, int numero_semana) {
         
         leerCadenaSegura("Fecha (YYYY-MM-DD): ", zona->semanas[numero_semana].dias[indice_dia].fecha, 11);
         zona->semanas[numero_semana].dias[indice_dia].co2 = leerFloatSeguro("CO2 (ppm): ", 0.0, 1.0);
-        zona->semanas[numero_semana].dias[indice_dia].so2 = leerFloatSeguro("SO2 (µg/m³): ", 0.0, 100.0);
-        zona->semanas[numero_semana].dias[indice_dia].no2 = leerFloatSeguro("NO2 (µg/m³): ", 0.0, 300.0);
-        zona->semanas[numero_semana].dias[indice_dia].pm25 = leerFloatSeguro("PM2.5 (µg/m³): ", 0.0, 500.0);
+        zona->semanas[numero_semana].dias[indice_dia].so2 = leerFloatSeguro("SO2 (ug/m3): ", 0.0, 100.0);
+        zona->semanas[numero_semana].dias[indice_dia].no2 = leerFloatSeguro("NO2 (ug/m3): ", 0.0, 300.0);
+        zona->semanas[numero_semana].dias[indice_dia].pm25 = leerFloatSeguro("PM2.5 (ug/m3): ", 0.0, 500.0);
     }
     
     // Actualizar el número de semanas si es necesario
@@ -692,7 +699,7 @@ void ingresarDatosManualSemana(struct Zona *zona, int numero_semana) {
  */
 void guardarSemana(struct Zona *zona, int numero_semana) {
     char nombre_archivo[64];
-    sprintf(nombre_archivo, "%s_semana%d.dat", zona->nombre, numero_semana+1);
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "%s_semana%d.dat", zona->nombre, numero_semana+1);
     
     FILE *archivo = fopen(nombre_archivo, "wb");
     if (archivo) {
@@ -705,13 +712,43 @@ void guardarSemana(struct Zona *zona, int numero_semana) {
 }
 
 /**
+ * Guarda los datos de un mes específico en un archivo checkpoint
+ * Formato: mes_X/nombre_zona_mesX.dat
+ */
+void guardarMes(struct Zona *zona, int numero_mes) {
+    char nombre_carpeta[32];
+    char nombre_archivo[96];
+    char comando_mkdir[128];
+    
+    // Crear nombre de carpeta: mes_1, mes_2, etc.
+    snprintf(nombre_carpeta, sizeof(nombre_carpeta), "mes_%d", numero_mes + 1);
+    
+    // Crear carpeta si no existe (compatible con Windows)
+    snprintf(comando_mkdir, sizeof(comando_mkdir), "mkdir \"%s\" 2>nul", nombre_carpeta);
+    system(comando_mkdir);
+    
+    // Crear ruta completa del archivo
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "%s\\%s_mes%d.dat", 
+             nombre_carpeta, zona->nombre, numero_mes + 1);
+    
+    FILE *archivo = fopen(nombre_archivo, "wb");
+    if (archivo) {
+        fwrite(&zona->meses[numero_mes], sizeof(struct Mes), 1, archivo);
+        fclose(archivo);
+        printf("Mes guardado en %s\n", nombre_archivo);
+    } else {
+        printf("Error: No se pudo guardar el mes en %s\n", nombre_archivo);
+    }
+}
+
+/**
  * Carga los datos de una semana específica desde un archivo checkpoint
 
 
  */
 void cargarSemana(struct Zona *zona, int numero_semana) {
     char nombre_archivo[64];
-    sprintf(nombre_archivo, "%s_semana%d.dat", zona->nombre, numero_semana+1);
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "%s_semana%d.dat", zona->nombre, numero_semana+1);
     
     FILE *archivo = fopen(nombre_archivo, "rb");
     if (archivo) {
@@ -729,10 +766,41 @@ void cargarSemana(struct Zona *zona, int numero_semana) {
 }
 
 /**
+ * Carga los datos de un mes específico desde un archivo checkpoint
+ * Formato: mes_X/nombre_zona_mesX.dat
+ */
+void cargarMes(struct Zona *zona, int numero_mes) {
+    char nombre_carpeta[32];
+    char nombre_archivo[96];
+    
+    // Crear nombre de carpeta: mes_1, mes_2, etc.
+    snprintf(nombre_carpeta, sizeof(nombre_carpeta), "mes_%d", numero_mes + 1);
+    
+    // Crear ruta completa del archivo
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "%s\\%s_mes%d.dat", 
+             nombre_carpeta, zona->nombre, numero_mes + 1);
+    
+    FILE *archivo = fopen(nombre_archivo, "rb");
+    if (archivo) {
+        fread(&zona->meses[numero_mes], sizeof(struct Mes), 1, archivo);
+        fclose(archivo);
+        printf("Mes %d cargado de %s\n", numero_mes + 1, nombre_archivo);
+        
+        // Actualizar número de meses si es necesario
+        if (numero_mes >= zona->numMeses) {
+            zona->numMeses = numero_mes + 1;
+        }
+    } else {
+        printf("No existe checkpoint para el mes %d en %s\n", numero_mes + 1, nombre_archivo);
+    }
+}
+
+/**
  * Guarda el estado actual de las semanas en un archivo
  */
 void guardarSemanaActual(int semanaActual[], int numZonas) {
-    FILE *archivo = fopen("semanas_actuales.dat", "wb");
+    crearCarpetaSistema();
+    FILE *archivo = fopen("sistema_archivos\\semanas_actuales.dat", "wb");
     if (archivo) {
         fwrite(&numZonas, sizeof(int), 1, archivo);
         fwrite(semanaActual, sizeof(int), numZonas, archivo);
@@ -744,7 +812,7 @@ void guardarSemanaActual(int semanaActual[], int numZonas) {
  * Carga el estado actual de las semanas desde un archivo
  */
 void cargarSemanaActual(int semanaActual[], int numZonas) {
-    FILE *archivo = fopen("semanas_actuales.dat", "rb");
+    FILE *archivo = fopen("sistema_archivos\\semanas_actuales.dat", "rb");
     if (archivo) {
         int numZonasCargadas;
         fread(&numZonasCargadas, sizeof(int), 1, archivo);
@@ -756,23 +824,30 @@ void cargarSemanaActual(int semanaActual[], int numZonas) {
 }
 
 /**
- * Carga los datos de las zonas desde sus archivos de checkpoint
+ * Carga los datos de las zonas desde sus archivos de checkpoint organizados por mes
  */
 void cargarDatosZonas(struct Zona zonas[], int numZonas) {
     for (int i = 0; i < numZonas; i++) {
         // Buscar el archivo de checkpoint más reciente para esta zona
-        for (int semana = MAX_SEMANAS - 1; semana >= 0; semana--) {
-            char nombre_archivo[64];
-            sprintf(nombre_archivo, "%s_semana%d.dat", zonas[i].nombre, semana + 1);
+        for (int mes = MAX_MESES - 1; mes >= 0; mes--) {
+            char nombre_carpeta[32];
+            char nombre_archivo[96];
+            
+            // Crear nombre de carpeta: mes_1, mes_2, etc.
+            snprintf(nombre_carpeta, sizeof(nombre_carpeta), "mes_%d", mes + 1);
+            
+            // Crear ruta completa del archivo
+            snprintf(nombre_archivo, sizeof(nombre_archivo), "%s\\%s_mes%d.dat", 
+                     nombre_carpeta, zonas[i].nombre, mes + 1);
             
             FILE *archivo = fopen(nombre_archivo, "rb");
             if (archivo) {
-                fread(&zonas[i].semanas[semana], sizeof(struct Semana), 1, archivo);
+                fread(&zonas[i].meses[mes], sizeof(struct Mes), 1, archivo);
                 fclose(archivo);
                 
-                // Actualizar el número de semanas de la zona
-                if (semana >= zonas[i].numSemanas) {
-                    zonas[i].numSemanas = semana + 1;
+                // Actualizar el número de meses de la zona
+                if (mes >= zonas[i].numMeses) {
+                    zonas[i].numMeses = mes + 1;
                 }
             }
         }
@@ -786,7 +861,7 @@ void configurarFechasInicio(struct ConfiguracionFechas *config) {
     printf("Configuracion de fechas de inicio para registro automatico\n");
     printf("=======================================================\n");
     
-    config->anio_inicio = leerEnteroSeguro("Año de inicio (2020-2030): ", 2020, 2030);
+    config->anio_inicio = leerEnteroSeguro("Anio de inicio (2020-2030): ", 2020, 2030);
     config->mes_inicio = leerEnteroSeguro("Mes de inicio (1-12): ", 1, 12);
     config->dia_inicio = leerEnteroSeguro("Dia de inicio (1-31): ", 1, 31);
     config->usar_fechas_automaticas = leerEnteroSeguro("¿Usar fechas automaticas para nuevos registros? (1=Si, 0=No): ", 0, 1);
@@ -808,14 +883,14 @@ void configurarFechasInicio(struct ConfiguracionFechas *config) {
  * Calcula una fecha automática basada en la configuración y días relativos
  */
 void calcularFechaAutomatica(struct ConfiguracionFechas *config, int dia_relativo, char *fecha_resultado) {
-    // Días por mes (año no bisiesto)
+    // Dias por mes (anio no bisiesto)
     int dias_mes[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     
     int anio = config->anio_inicio;
     int mes = config->mes_inicio;
     int dia = config->dia_inicio + dia_relativo;
     
-    // Ajustar año bisiesto
+    // Ajustar anio bisiesto
     if ((anio % 4 == 0 && anio % 100 != 0) || (anio % 400 == 0)) {
         dias_mes[1] = 29;
     }
@@ -827,7 +902,7 @@ void calcularFechaAutomatica(struct ConfiguracionFechas *config, int dia_relativ
         if (mes > 12) {
             mes = 1;
             anio++;
-            // Recalcular año bisiesto para el nuevo año
+            // Recalcular anio bisiesto para el nuevo anio
             if ((anio % 4 == 0 && anio % 100 != 0) || (anio % 400 == 0)) {
                 dias_mes[1] = 29;
             } else {
@@ -966,6 +1041,147 @@ void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct Configura
 }
 
 /**
+ * Permite ingresar datos manualmente para un mes específico con fechas automáticas
+ */
+void ingresarDatosManualMes(struct Zona *zona, int numero_mes, struct ConfiguracionFechas *config) {
+    if (numero_mes >= MAX_MESES) {
+        printf("Mes invalido. Debe estar entre 0 y %d.\n", MAX_MESES-1);
+        return;
+    }
+    
+    printf("\n+---------------------------------------------------------------+\n");
+    printf("| INGRESO MANUAL DE DATOS - ZONA: %-28s |\n", zona->nombre);
+    printf("| MES: %-3d                                                     |\n", numero_mes+1);
+    printf("+---------------------------------------------------------------+\n");
+    printf("| Instrucciones:                                                |\n");
+    printf("| - Ingrese solo numeros (sin acentos ni caracteres especiales)|\n");
+    printf("| - Valores fuera de rango seran rechazados                    |\n");
+    printf("| - Escriba 'c' para cancelar en cualquier momento             |\n");
+    printf("+---------------------------------------------------------------+\n\n");
+    
+    // Determinar número de días del mes
+    int dias_mes[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    int max_dias = dias_mes[numero_mes % 12];
+    
+    // Ajustar anio bisiesto si es febrero
+    if (numero_mes % 12 == 1) { // Febrero
+        int anio = config->anio_inicio + (numero_mes / 12);
+        if ((anio % 4 == 0 && anio % 100 != 0) || (anio % 400 == 0)) {
+            max_dias = 29;
+        }
+    }
+    
+    zona->meses[numero_mes].numDias = 0; // Reiniciar contador de días
+    
+    for (int d = 0; d < max_dias; d++) {
+        printf("--- DIA %d ---\n", d+1);
+        
+        // Manejo de fechas automáticas
+        if (config->usar_fechas_automaticas) {
+            int dia_relativo = (numero_mes * 30) + d; // Aproximación para cálculo
+            calcularFechaAutomatica(config, dia_relativo, zona->meses[numero_mes].dias[d].fecha);
+            printf("Fecha automatica: %s\n", zona->meses[numero_mes].dias[d].fecha);
+        } else {
+            char fecha_temp[12];
+            leerCadenaSegura("Fecha (YYYY-MM-DD): ", fecha_temp, 11);
+            
+            if (fecha_temp[0] == 'c' || fecha_temp[0] == 'C') {
+                printf("Ingreso cancelado.\n");
+                return;
+            }
+            
+            strncpy(zona->meses[numero_mes].dias[d].fecha, fecha_temp, 11);
+            zona->meses[numero_mes].dias[d].fecha[10] = '\0';
+        }
+        
+        // Ingreso de contaminantes con validación
+        char entrada[32];
+        float valor;
+        
+        // CO2
+        while (1) {
+            leerCadenaSegura("CO2 en ppm (0.0-1.0) o 'c' para cancelar: ", entrada, 31);
+            
+            if (entrada[0] == 'c' || entrada[0] == 'C') {
+                printf("Ingreso cancelado.\n");
+                return;
+            }
+            
+            if (validarEntradaNumerica(entrada, &valor, 0.0f, 1.0f)) {
+                zona->meses[numero_mes].dias[d].co2 = valor;
+                break;
+            } else {
+                printf("Error: Valor invalido. Debe estar entre 0.0 y 1.0\n");
+            }
+        }
+        
+        // SO2
+        while (1) {
+            leerCadenaSegura("SO2 en ug/m3 (0.0-100.0) o 'c' para cancelar: ", entrada, 31);
+            
+            if (entrada[0] == 'c' || entrada[0] == 'C') {
+                printf("Ingreso cancelado.\n");
+                return;
+            }
+            
+            if (validarEntradaNumerica(entrada, &valor, 0.0f, 100.0f)) {
+                zona->meses[numero_mes].dias[d].so2 = valor;
+                break;
+            } else {
+                printf("Error: Valor invalido. Debe estar entre 0.0 y 100.0\n");
+            }
+        }
+        
+        // NO2
+        while (1) {
+            leerCadenaSegura("NO2 en ug/m3 (0.0-300.0) o 'c' para cancelar: ", entrada, 31);
+            
+            if (entrada[0] == 'c' || entrada[0] == 'C') {
+                printf("Ingreso cancelado.\n");
+                return;
+            }
+            
+            if (validarEntradaNumerica(entrada, &valor, 0.0f, 300.0f)) {
+                zona->meses[numero_mes].dias[d].no2 = valor;
+                break;
+            } else {
+                printf("Error: Valor invalido. Debe estar entre 0.0 y 300.0\n");
+            }
+        }
+        
+        // PM2.5
+        while (1) {
+            leerCadenaSegura("PM2.5 en ug/m3 (0.0-500.0) o 'c' para cancelar: ", entrada, 31);
+            
+            if (entrada[0] == 'c' || entrada[0] == 'C') {
+                printf("Ingreso cancelado.\n");
+                return;
+            }
+            
+            if (validarEntradaNumerica(entrada, &valor, 0.0f, 500.0f)) {
+                zona->meses[numero_mes].dias[d].pm25 = valor;
+                break;
+            } else {
+                printf("Error: Valor invalido. Debe estar entre 0.0 y 500.0\n");
+            }
+        }
+        
+        zona->meses[numero_mes].numDias = d + 1;
+        printf("Dia %d registrado correctamente.\n\n", d+1);
+    }
+    
+    // Actualizar el número de meses si es necesario
+    if (numero_mes >= zona->numMeses) {
+        zona->numMeses = numero_mes + 1;
+    }
+    
+    printf("Mes %d completado para la zona %s.\n", numero_mes+1, zona->nombre);
+    
+    // Guardar automáticamente el mes completado
+    guardarMes(zona, numero_mes);
+}
+
+/**
  * Limpia el buffer de entrada para evitar problemas con caracteres residuales
  */
 void limpiarBuffer() {
@@ -1001,27 +1217,62 @@ void exportarPlantillaDatos(const char* nombreArchivo) {
         return;
     }
     
-    // Instrucciones súper simples
-    fprintf(f, "PLANTILLA SIMPLE PARA DATOS AMBIENTALES\n");
-    fprintf(f, "=======================================\n\n");
+    // Instrucciones para carga masiva - igual que el archivo datos
+    fprintf(f, "PLANTILLA PARA CARGA MASIVA DE 1 MES COMPLETO\n");
+    fprintf(f, "=============================================\n\n");
     fprintf(f, "Formato: Zona,Fecha,CO2,SO2,NO2,PM25\n");
     fprintf(f, "- Zona: Quito, Cuenca, Guayaquil, Loja, Ambato\n");
-    fprintf(f, "- Fecha: YYYY-MM-DD\n");
+    fprintf(f, "- Fecha: YYYY-MM-DD (fechas consecutivas para formar un mes)\n");
     fprintf(f, "- CO2: 0.0-1.0 (ppm)\n");
     fprintf(f, "- SO2: 0.0-100.0 (ug/m³)\n");
     fprintf(f, "- NO2: 0.0-300.0 (ug/m³)\n");
     fprintf(f, "- PM25: 0.0-500.0 (ug/m³)\n\n");
     
-    // Datos de ejemplo
-    fprintf(f, "# Datos de ejemplo - Reemplazar con valores reales\n");
-    fprintf(f, "Quito,2024-07-01,0.040,8.0,25.0,15.0\n");
-    fprintf(f, "Cuenca,2024-07-01,0.042,9.0,27.0,18.0\n");
-    fprintf(f, "Guayaquil,2024-07-01,0.045,12.0,30.0,22.0\n");
-    fprintf(f, "Loja,2024-07-01,0.037,7.0,23.0,13.0\n");
-    fprintf(f, "Ambato,2024-07-01,0.041,8.5,26.0,16.0\n");
+    fprintf(f, "INSTRUCCIONES:\n");
+    fprintf(f, "1. Incluya datos para todas las zonas\n");
+    fprintf(f, "2. Use fechas consecutivas para formar un mes completo\n");
+    fprintf(f, "3. El sistema detectara automaticamente el mes y organizara los datos\n");
+    fprintf(f, "4. Puede incluir datos parciales (no es necesario completar 30-31 dias)\n\n");
+    
+    // Datos de ejemplo exactos del archivo datos
+    fprintf(f, "# Ejemplo de datos para ENERO 2024 - Reemplazar con valores reales\n");
+    fprintf(f, "Quito,2024-01-01,0.040,8.0,25.0,15.0\n");
+    fprintf(f, "Quito,2024-01-02,0.042,8.5,26.0,16.0\n");
+    fprintf(f, "Quito,2024-01-03,0.038,7.5,24.0,14.0\n");
+    fprintf(f, "Quito,2024-01-04,0.041,8.2,25.5,15.5\n");
+    fprintf(f, "Quito,2024-01-05,0.039,7.8,24.5,15.0\n\n");
+    
+    fprintf(f, "Cuenca,2024-01-01,0.042,9.0,27.0,18.0\n");
+    fprintf(f, "Cuenca,2024-01-02,0.044,9.5,28.0,19.0\n");
+    fprintf(f, "Cuenca,2024-01-03,0.040,8.5,26.0,17.0\n");
+    fprintf(f, "Cuenca,2024-01-04,0.043,9.2,27.5,18.5\n");
+    fprintf(f, "Cuenca,2024-01-05,0.041,8.8,26.5,17.5\n\n");
+    
+    fprintf(f, "Guayaquil,2024-01-01,0.045,12.0,30.0,22.0\n");
+    fprintf(f, "Guayaquil,2024-01-02,0.047,12.5,31.0,23.0\n");
+    fprintf(f, "Guayaquil,2024-01-03,0.043,11.5,29.0,21.0\n");
+    fprintf(f, "Guayaquil,2024-01-04,0.046,12.2,30.5,22.5\n");
+    fprintf(f, "Guayaquil,2024-01-05,0.044,11.8,29.5,21.5\n\n");
+    
+    fprintf(f, "Loja,2024-01-01,0.037,7.0,23.0,13.0\n");
+    fprintf(f, "Loja,2024-01-02,0.039,7.5,24.0,14.0\n");
+    fprintf(f, "Loja,2024-01-03,0.035,6.5,22.0,12.0\n");
+    fprintf(f, "Loja,2024-01-04,0.038,7.2,23.5,13.5\n");
+    fprintf(f, "Loja,2024-01-05,0.036,6.8,22.5,12.5\n\n");
+    
+    fprintf(f, "Ambato,2024-01-01,0.041,8.5,26.0,16.0\n");
+    fprintf(f, "Ambato,2024-01-02,0.043,9.0,27.0,17.0\n");
+    fprintf(f, "Ambato,2024-01-03,0.039,8.0,25.0,15.0\n");
+    fprintf(f, "Ambato,2024-01-04,0.042,8.7,26.5,16.5\n");
+    fprintf(f, "Ambato,2024-01-05,0.040,8.2,25.5,15.5\n\n");
+    
+    fprintf(f, "# Continuar con mas dias segun sea necesario...\n");
+    fprintf(f, "# Para un mes completo, incluir hasta el dia 28, 29, 30 o 31 segun corresponda\n");
     
     fclose(f);
-    printf(ANSI_VERDE "Plantilla creada: %s\n" ANSI_RESET, nombreArchivo);
+    printf(ANSI_VERDE "Plantilla para carga masiva creada: %s\n" ANSI_RESET, nombreArchivo);
+    printf(ANSI_CIAN "La plantilla incluye ejemplos para 5 dias de todas las zonas\n" ANSI_RESET);
+    printf(ANSI_AMARILLO "Edite el archivo y agregue mas dias segun necesite\n" ANSI_RESET);
 }
 
 /**
@@ -1037,18 +1288,23 @@ int importarDatosDesdeArchivo(struct Zona zonas[], int numZonas, const char* nom
     char linea[256];
     int importados = 0;
     int lineas_procesadas = 0;
+    int errores = 0;
+    int duplicados = 0;
+    int meses_detectados[MAX_MESES] = {0}; // Para rastrear qué meses se están cargando
+    int dias_faltantes[MAX_ZONAS][MAX_MESES] = {0}; // Para rastrear días faltantes por zona y mes
     
     printf(ANSI_AMARILLO "Importando datos desde %s...\n" ANSI_RESET, nombreArchivo);
+    printf(ANSI_CIAN "Procesando carga masiva de datos mensuales...\n" ANSI_RESET);
     
     while (fgets(linea, sizeof(linea), f)) {
         lineas_procesadas++;
         
-        // Saltar líneas de comentario y líneas vacías
+        // Saltar lineas de comentario y lineas vacias
         if (linea[0] == '#' || linea[0] == '\n' || linea[0] == '\r') {
             continue;
         }
         
-        // Parsear línea manualmente para evitar problemas de compatibilidad
+        // Parsear linea manualmente
         char zona[32], fecha[12];
         float co2, so2, no2, pm25;
         
@@ -1057,7 +1313,7 @@ int importarDatosDesdeArchivo(struct Zona zonas[], int numZonas, const char* nom
         char *coma;
         int leidos = 0;
         
-        // Extraer zona (hasta la primera coma)
+        // Extraer zona
         coma = strchr(ptr, ',');
         if (coma) {
             int len = coma - ptr;
@@ -1067,7 +1323,7 @@ int importarDatosDesdeArchivo(struct Zona zonas[], int numZonas, const char* nom
             ptr = coma + 1;
             leidos++;
             
-            // Extraer fecha (hasta la segunda coma)
+            // Extraer fecha
             coma = strchr(ptr, ',');
             if (coma) {
                 len = coma - ptr;
@@ -1077,9 +1333,9 @@ int importarDatosDesdeArchivo(struct Zona zonas[], int numZonas, const char* nom
                 ptr = coma + 1;
                 leidos++;
                 
-                // Extraer los 4 valores numéricos
+                // Extraer los 4 valores numericos
                 if (sscanf(ptr, "%f,%f,%f,%f", &co2, &so2, &no2, &pm25) == 4) {
-                    leidos = 6; // Total de campos leídos correctamente
+                    leidos = 6;
                 }
             }
         }
@@ -1095,116 +1351,711 @@ int importarDatosDesdeArchivo(struct Zona zonas[], int numZonas, const char* nom
             }
             
             if (zona_idx >= 0) {
-                // Validar que los datos estén en rangos razonables
+                // Validar rangos
                 if (co2 >= 0 && co2 <= 1000 && so2 >= 0 && so2 <= 100 && 
                     no2 >= 0 && no2 <= 300 && pm25 >= 0 && pm25 <= 500) {
                     
-                    // Encontrar semana y día disponible
-                    int semana = zonas[zona_idx].numSemanas;
-                    if (semana >= MAX_SEMANAS) semana = MAX_SEMANAS - 1;
-                    
-                    int dia = (semana < zonas[zona_idx].numSemanas) ? 
-                              zonas[zona_idx].semanas[semana].numDias : 0;
-                    
-                    if (dia >= MAX_DIAS_SEMANA) {
-                        semana++;
-                        dia = 0;
-                        if (semana >= MAX_SEMANAS) {
-                            printf(ANSI_AMARILLO "Zona %s llena, saltando resto de datos\n" ANSI_RESET, zona);
-                            continue;
+                    // Extraer mes y dia de la fecha
+                    int anio, mes, dia;
+                    if (sscanf(fecha, "%d-%d-%d", &anio, &mes, &dia) == 3) {
+                        mes--; // Convertir a indice (0-11)
+                        dia--; // Convertir a indice (0-30)
+                        
+                        if (mes >= 0 && mes < MAX_MESES && dia >= 0 && dia < MAX_DIAS_MES) {
+                            // Verificar si el dato ya existe (evitar duplicados)
+                            struct DatosAmbientales *dato_existente = &zonas[zona_idx].meses[mes].dias[dia];
+                            if (strlen(dato_existente->fecha) > 0) {
+                                duplicados++;
+                                printf(ANSI_AMARILLO "Duplicado encontrado: %s en %s (%s)\n" ANSI_RESET, 
+                                       zona, fecha, "dato sobrescrito");
+                            }
+                            
+                            // Marcar que este mes se está cargando
+                            meses_detectados[mes] = 1;
+                            
+                            // Asegurar que el mes existe
+                            if (mes >= zonas[zona_idx].numMeses) {
+                                zonas[zona_idx].numMeses = mes + 1;
+                            }
+                            
+                            // Agregar el dato
+                            struct DatosAmbientales *dato = &zonas[zona_idx].meses[mes].dias[dia];
+                            dato->co2 = co2;
+                            dato->so2 = so2;
+                            dato->no2 = no2;
+                            dato->pm25 = pm25;
+                            strncpy(dato->fecha, fecha, 11);
+                            dato->fecha[10] = '\0';
+                            
+                            if (dia >= zonas[zona_idx].meses[mes].numDias) {
+                                zonas[zona_idx].meses[mes].numDias = dia + 1;
+                            }
+                            
+                            importados++;
+                            
+                            if (importados % 50 == 0) {
+                                printf(ANSI_VERDE "Importados: %d registros\n" ANSI_RESET, importados);
+                            }
                         }
                     }
-                    
-                    // Asegurar que la semana existe
-                    if (semana >= zonas[zona_idx].numSemanas) {
-                        zonas[zona_idx].numSemanas = semana + 1;
-                        zonas[zona_idx].semanas[semana].numDias = 0;
-                    }
-                    
-                    // Agregar el dato
-                    struct DatosAmbientales *dato = &zonas[zona_idx].semanas[semana].dias[dia];
-                    dato->co2 = co2;
-                    dato->so2 = so2;
-                    dato->no2 = no2;
-                    dato->pm25 = pm25;
-                    strncpy(dato->fecha, fecha, 11);
-                    dato->fecha[10] = '\0';
-                    
-                    zonas[zona_idx].semanas[semana].numDias++;
-                    importados++;
-                    
-                    // Mostrar progreso cada 10 registros
-                    if (importados % 10 == 0) {
-                        printf(ANSI_VERDE "Importados: %d registros\n" ANSI_RESET, importados);
-                    }
                 } else {
-                    printf(ANSI_AMARILLO "Linea %d: Valores fuera de rango\n" ANSI_RESET, lineas_procesadas);
+                    errores++;
+                    printf(ANSI_AMARILLO "Linea %d: Valores fuera de rango para %s (CO2:%.2f SO2:%.2f NO2:%.2f PM25:%.2f)\n" ANSI_RESET, 
+                           lineas_procesadas, zona, co2, so2, no2, pm25);
                 }
             } else {
+                errores++;
                 printf(ANSI_AMARILLO "Linea %d: Zona '%s' no encontrada\n" ANSI_RESET, lineas_procesadas, zona);
             }
+        } else {
+            errores++;
+            printf(ANSI_AMARILLO "Linea %d: Formato incorrecto\n" ANSI_RESET, lineas_procesadas);
         }
     }
     
     fclose(f);
     
+    // Análisis de días faltantes
+    printf(ANSI_CIAN "\nAnalizando integridad de datos...\n" ANSI_RESET);
+    for (int mes = 0; mes < MAX_MESES; mes++) {
+        if (meses_detectados[mes]) {
+            printf(ANSI_AMARILLO "Mes %d:\n" ANSI_RESET, mes + 1);
+            for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+                int dias_con_datos = 0;
+                for (int dia = 0; dia < zonas[zona_idx].meses[mes].numDias; dia++) {
+                    if (strlen(zonas[zona_idx].meses[mes].dias[dia].fecha) > 0) {
+                        dias_con_datos++;
+                    }
+                }
+                printf("  %s: %d dias con datos\n", zonas[zona_idx].nombre, dias_con_datos);
+            }
+        }
+    }
+    
     if (importados > 0) {
-        printf(ANSI_VERDE "\n¡EXITO! Se importaron %d registros\n" ANSI_RESET, importados);
-        printf(ANSI_AMARILLO "Resumen:\n" ANSI_RESET);
+        printf(ANSI_VERDE "\n=== RESUMEN DE IMPORTACION ===\n" ANSI_RESET);
+        printf(ANSI_VERDE "Registros importados: %d\n" ANSI_RESET, importados);
+        printf(ANSI_AMARILLO "Errores encontrados: %d\n" ANSI_RESET, errores);
+        printf(ANSI_AMARILLO "Duplicados sobrescritos: %d\n" ANSI_RESET, duplicados);
+        printf(ANSI_AMARILLO "Lineas procesadas: %d\n" ANSI_RESET, lineas_procesadas);
+        
+        // Mostrar resumen de meses cargados
+        printf(ANSI_CIAN "Meses cargados: ");
+        for (int i = 0; i < MAX_MESES; i++) {
+            if (meses_detectados[i]) {
+                printf("%d ", i + 1);
+            }
+        }
+        printf("\n" ANSI_RESET);
+        
+        // Validar automáticamente los datos importados
+        int problemas = validarDatosImportados(zonas, numZonas, meses_detectados);
+        
+        // Manejar días faltantes
+        manejarDiasFaltantes(zonas, numZonas, meses_detectados);
+        
+        // Generar reporte completo de resumen
+        generarResumenImportacion(zonas, numZonas, meses_detectados, importados, errores, duplicados);
+        
+        // Guardar automaticamente los meses cargados
+        for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+            for (int mes = 0; mes < MAX_MESES; mes++) {
+                if (meses_detectados[mes] && zonas[zona_idx].meses[mes].numDias > 0) {
+                    guardarMes(&zonas[zona_idx], mes);
+                }
+            }
+        }
+        
+        // Usar lógica inteligente para determinar el mes actual
+        int mes_sistema_inteligente = determinarMesActualInteligente(zonas, numZonas, meses_detectados);
+        
+        // Actualizar el mes actual del sistema
+        int mes_actual[MAX_ZONAS];
         for (int i = 0; i < numZonas; i++) {
-            int total = 0;
-            for (int s = 0; s < zonas[i].numSemanas; s++) {
-                total += zonas[i].semanas[s].numDias;
-            }
-            if (total > 0) {
-                printf("  %s: %d registros\n", zonas[i].nombre, total);
-            }
+            mes_actual[i] = mes_sistema_inteligente;
+        }
+        guardarMesActual(mes_actual, numZonas);
+        
+        printf(ANSI_VERDE "Sistema configurado inteligentemente al mes %d\n" ANSI_RESET, 
+               mes_sistema_inteligente + 1);
+        
+        // Actualizar fecha del sistema según los datos importados
+        actualizarFechaSegunDatos(zonas, numZonas);
+        
+        printf(ANSI_VERDE "Datos guardados automaticamente en carpetas por mes\n" ANSI_RESET);
+        
+        // Mensaje final basado en la calidad de los datos
+        if (problemas == 0) {
+            printf(ANSI_VERDE "\nIMPORTACION COMPLETADA EXITOSAMENTE\n" ANSI_RESET);
+        } else {
+            printf(ANSI_AMARILLO "\nIMPORTACION COMPLETADA CON ADVERTENCIAS\n" ANSI_RESET);
         }
     } else {
         printf(ANSI_ROJO "No se pudo importar ningun dato.\n" ANSI_RESET);
-        printf(ANSI_AMARILLO "Verifique que el archivo tenga el formato correcto:\n");
-        printf("Zona,Fecha,CO2,SO2,NO2,PM25\n");
-        printf("Ejemplo: Quito,2024-07-01,400.0,5.0,25.0,15.0\n" ANSI_RESET);
+        printf(ANSI_AMARILLO "Verifique el formato:\n");
+        printf("  - Zona,Fecha,CO2,SO2,NO2,PM25\n");
+        printf("  - Fecha: YYYY-MM-DD\n");
+        printf("  - Sin espacios extra\n");
+        printf("  - Valores numericos validos\n" ANSI_RESET);
     }
     
     return importados;
 }
 
 /**
- * Guarda la configuración de fechas en un archivo dedicado
+ * Función para detectar la fecha más reciente en los datos importados
  */
-int guardarConfiguracionFechas(struct ConfiguracionFechas *config) {
-    FILE *archivo = fopen("config_fechas.dat", "wb");
+void actualizarFechaSegunDatos(struct Zona zonas[], int numZonas) {
+    extern struct ConfiguracionFechas config_fechas;
     
-    if (!archivo) {
-        return 0; // No se pudo crear el archivo
+    int anio_mas_reciente = 0;
+    int mes_mas_reciente = 0;
+    int dia_mas_reciente = 0;
+    
+    // Buscar la fecha más reciente en todos los datos
+    for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+        for (int mes = 0; mes < zonas[zona_idx].numMeses; mes++) {
+            for (int dia = 0; dia < zonas[zona_idx].meses[mes].numDias; dia++) {
+                struct DatosAmbientales *dato = &zonas[zona_idx].meses[mes].dias[dia];
+                
+                // Verificar si hay fecha válida
+                if (strlen(dato->fecha) > 8) {
+                    int anio, mes_fecha, dia_fecha;
+                    if (sscanf(dato->fecha, "%d-%d-%d", &anio, &mes_fecha, &dia_fecha) == 3) {
+                        // Comparar fechas para encontrar la más reciente
+                        int fecha_actual = anio * 10000 + mes_fecha * 100 + dia_fecha;
+                        int fecha_mas_reciente = anio_mas_reciente * 10000 + mes_mas_reciente * 100 + dia_mas_reciente;
+                        
+                        if (fecha_actual > fecha_mas_reciente) {
+                            anio_mas_reciente = anio;
+                            mes_mas_reciente = mes_fecha;
+                            dia_mas_reciente = dia_fecha;
+                        }
+                    }
+                }
+            }
+        }
     }
     
-    // Escribir la configuración de fechas
-    fwrite(config, sizeof(struct ConfiguracionFechas), 1, archivo);
-    fclose(archivo);
-    
-    printf(ANSI_VERDE "Configuracion de fechas guardada correctamente.\n" ANSI_RESET);
-    return 1; // Guardado exitoso
+    // Actualizar configuración si se encontró una fecha válida
+    if (anio_mas_reciente > 0) {
+        config_fechas.anio_inicio = anio_mas_reciente;
+        config_fechas.mes_inicio = mes_mas_reciente;
+        config_fechas.dia_inicio = dia_mas_reciente;
+        
+        guardarConfiguracionFechas(&config_fechas);
+        
+        printf(ANSI_VERDE "Fecha del sistema actualizada a: %02d/%02d/%d\n" ANSI_RESET,
+               dia_mas_reciente, mes_mas_reciente, anio_mas_reciente);
+    }
 }
 
 /**
- * Carga la configuración de fechas desde un archivo dedicado
+ * Devuelve el color ANSI según el nivel de peligrosidad del contaminante
  */
-int cargarConfiguracionFechas(struct ConfiguracionFechas *config) {
-    FILE *archivo = fopen("config_fechas.dat", "rb");
+const char* obtenerColorContaminante(float valor, int tipo_contaminante) {
+    switch (tipo_contaminante) {
+        case TIPO_CO2:
+            if (valor <= 400) return ANSI_VERDE;
+            else if (valor <= 600) return ANSI_AMARILLO;
+            else if (valor <= 1000) return ANSI_MAGENTA;
+            else return ANSI_ROJO;
+            
+        case TIPO_SO2:
+            if (valor <= 20) return ANSI_VERDE;
+            else if (valor <= 40) return ANSI_AMARILLO;
+            else if (valor <= 60) return ANSI_MAGENTA;
+            else return ANSI_ROJO;
+            
+        case TIPO_NO2:
+            if (valor <= 53) return ANSI_VERDE;
+            else if (valor <= 100) return ANSI_AMARILLO;
+            else if (valor <= 200) return ANSI_MAGENTA;
+            else return ANSI_ROJO;
+            
+        case TIPO_PM25:
+            if (valor <= 12) return ANSI_VERDE;
+            else if (valor <= 35) return ANSI_AMARILLO;
+            else if (valor <= 55) return ANSI_MAGENTA;
+            else return ANSI_ROJO;
+            
+        default:
+            return ANSI_RESET;
+    }
+}
+
+/**
+ * Devuelve una descripción del nivel de peligrosidad
+ */
+char* obtenerNivelPeligrosidad(float valor, int tipo_contaminante) {
+    switch (tipo_contaminante) {
+        case TIPO_CO2:
+            if (valor <= 400) return "Bueno";
+            else if (valor <= 600) return "Moderado";
+            else if (valor <= 1000) return "Alto";
+            else return "Peligroso";
+
+        case TIPO_SO2:
+            if (valor <= 20) return "Bueno";
+            else if (valor <= 40) return "Moderado";
+            else if (valor <= 60) return "Alto";
+            else return "Peligroso";
+            
+        case TIPO_NO2:
+            if (valor <= 53) return "Bueno";
+            else if (valor <= 100) return "Moderado";
+            else if (valor <= 200) return "Alto";
+            else return "Peligroso";
+            
+        case TIPO_PM25:
+            if (valor <= 12) return "Bueno";
+            else if (valor <= 35) return "Moderado";
+            else if (valor <= 55) return "Alto";
+            else return "Peligroso";
+            
+        default:
+            return "Desconocido";
+    }
+}
+
+/**
+ * Crea la carpeta para archivos del sistema si no existe
+ */
+void crearCarpetaSistema() {
+    char comando_mkdir[64];
+    snprintf(comando_mkdir, sizeof(comando_mkdir), "mkdir \"sistema_archivos\" 2>nul");
+    system(comando_mkdir);
+}
+
+// Función para ajustar el mes actual según la fecha del sistema
+void ajustarMesActualSegunFecha(int mesActual[], int numZonas) {
+    extern struct ConfiguracionFechas config_fechas;
     
-    if (!archivo) {
-        // Si no existe el archivo, usar configuración por defecto
-        inicializarConfiguracionFechas(config);
-        return 0; // Archivo no encontrado, usando valores por defecto
+    // Obtener fecha actual del sistema (8 de julio de 2025)
+    int dia_actual = 8;
+    int mes_actual = 7;  // Julio
+    int anio_actual = 2025;
+    
+    // Calcular el mes que debería estar activo
+    int mes_objetivo = mes_actual - 1; // Mes anterior al actual (junio = 6)
+    if (mes_objetivo < 1) {
+        mes_objetivo = 12;
+    }
+    mes_objetivo--; // Convertir a índice (0-11)
+    
+    // Si los datos son muy antiguos (enero 2024 vs julio 2025), ajustar al mes anterior
+    if (config_fechas.anio_inicio < anio_actual || 
+        (config_fechas.anio_inicio == anio_actual && config_fechas.mes_inicio < mes_actual)) {
+        
+        // Actualizar todos los meses actuales al mes objetivo
+        for (int i = 0; i < numZonas; i++) {
+            mesActual[i] = mes_objetivo;
+        }
+        
+        // Actualizar la configuración del sistema
+        config_fechas.mes_inicio = mes_objetivo + 1;
+        config_fechas.anio_inicio = anio_actual;
+        config_fechas.dia_inicio = dia_actual;
+        
+        guardarConfiguracionFechas(&config_fechas);
+        guardarMesActual(mesActual, numZonas);
+        
+        printf(ANSI_CIAN "Mes ajustado automaticamente a: %d (mes anterior al actual)\n" ANSI_RESET, mes_objetivo + 1);
+    }
+}
+
+// Función para determinar el mes actual inteligente basado en los datos importados
+int determinarMesActualInteligente(struct Zona zonas[], int numZonas, int meses_detectados[]) {
+    // Fecha actual del sistema: 8 de julio de 2025
+    int anio_actual = 2025;
+    int mes_actual = 7;   // Julio
+    int dia_actual = 8;
+    
+    // Encontrar el mes más reciente en los datos importados
+    int ultimo_mes_importado = -1;
+    int anio_mas_reciente = 0;
+    int mes_mas_reciente = 0;
+    int dia_mas_reciente = 0;
+    
+    for (int i = MAX_MESES - 1; i >= 0; i--) {
+        if (meses_detectados[i]) {
+            ultimo_mes_importado = i;
+            
+            // Buscar la fecha más reciente en este mes
+            for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+                if (zonas[zona_idx].meses[i].numDias > 0) {
+                    for (int dia = zonas[zona_idx].meses[i].numDias - 1; dia >= 0; dia--) {
+                        if (strlen(zonas[zona_idx].meses[i].dias[dia].fecha) > 0) {
+                            int anio_temp, mes_temp, dia_temp;
+                            if (sscanf(zonas[zona_idx].meses[i].dias[dia].fecha, "%d-%d-%d", 
+                                     &anio_temp, &mes_temp, &dia_temp) == 3) {
+                                if (anio_temp > anio_mas_reciente || 
+                                    (anio_temp == anio_mas_reciente && mes_temp > mes_mas_reciente) ||
+                                    (anio_temp == anio_mas_reciente && mes_temp == mes_mas_reciente && dia_temp > dia_mas_reciente)) {
+                                    anio_mas_reciente = anio_temp;
+                                    mes_mas_reciente = mes_temp;
+                                    dia_mas_reciente = dia_temp;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        }
     }
     
-    // Leer la configuración de fechas
-    fread(config, sizeof(struct ConfiguracionFechas), 1, archivo);
-    fclose(archivo);
+    if (ultimo_mes_importado == -1) {
+        printf(ANSI_AMARILLO "No se encontraron datos válidos para determinar mes actual.\n" ANSI_RESET);
+        return 0; // Mes 1 por defecto
+    }
     
-    printf(ANSI_VERDE "Configuracion de fechas cargada: %04d-%02d-%02d\n" ANSI_RESET,
-           config->anio_inicio, config->mes_inicio, config->dia_inicio);
-    return 1; // Carga exitosa
+    // Crear fecha numérica para comparación (YYYYMMDD)
+    long fecha_importada = anio_mas_reciente * 10000L + mes_mas_reciente * 100L + dia_mas_reciente;
+    long fecha_hoy = anio_actual * 10000L + mes_actual * 100L + dia_actual;
+    
+    int mes_sistema_ajustado;
+    
+    if (fecha_importada > fecha_hoy) {
+        // DATOS FUTUROS: Ajustar al día actual
+        printf(ANSI_CIAN "Datos futuros detectados (hasta %02d/%02d/%d).\n" ANSI_RESET, 
+               dia_mas_reciente, mes_mas_reciente, anio_mas_reciente);
+        printf(ANSI_CIAN "Sistema ajustado al día actual: %02d/%02d/%d\n" ANSI_RESET, 
+               dia_actual, mes_actual, anio_actual);
+        
+        // Si estamos en julio, el mes actual del sistema debería ser julio (mes 7 = índice 6)
+        mes_sistema_ajustado = mes_actual - 1; // Convertir a índice (0-11)
+        
+    } else {
+        // DATOS PASADOS: Posicionarse un día después del último dato
+        printf(ANSI_VERDE "Datos pasados detectados (hasta %02d/%02d/%d).\n" ANSI_RESET, 
+               dia_mas_reciente, mes_mas_reciente, anio_mas_reciente);
+        
+        // Calcular el día siguiente
+        int dia_siguiente = dia_mas_reciente + 1;
+        int mes_siguiente = mes_mas_reciente;
+        int anio_siguiente = anio_mas_reciente;
+        
+        // Manejar cambio de mes
+        int dias_en_mes[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+        
+        // Verificar año bisiesto
+        if ((anio_siguiente % 4 == 0 && anio_siguiente % 100 != 0) || (anio_siguiente % 400 == 0)) {
+            dias_en_mes[1] = 29;
+        }
+        
+        if (dia_siguiente > dias_en_mes[mes_siguiente - 1]) {
+            dia_siguiente = 1;
+            mes_siguiente++;
+            if (mes_siguiente > 12) {
+                mes_siguiente = 1;
+                anio_siguiente++;
+            }
+        }
+        
+        printf(ANSI_VERDE "Sistema posicionado el día después: %02d/%02d/%d\n" ANSI_RESET, 
+               dia_siguiente, mes_siguiente, anio_siguiente);
+        
+        // Verificar si hay conflicto con datos futuros
+        if (anio_siguiente > anio_actual || 
+            (anio_siguiente == anio_actual && mes_siguiente > mes_actual) ||
+            (anio_siguiente == anio_actual && mes_siguiente == mes_actual && dia_siguiente > dia_actual)) {
+            
+            printf(ANSI_AMARILLO "Conflicto detectado: el día siguiente sería futuro.\n" ANSI_RESET);
+            printf(ANSI_AMARILLO "Ajustando al día actual: %02d/%02d/%d\n" ANSI_RESET, 
+                   dia_actual, mes_actual, anio_actual);
+            
+            mes_sistema_ajustado = mes_actual - 1; // Convertir a índice
+        } else {
+            mes_sistema_ajustado = mes_siguiente - 1; // Convertir a índice
+        }
+    }
+    
+    // Asegurar que el mes esté en rango válido
+    if (mes_sistema_ajustado < 0) mes_sistema_ajustado = 0;
+    if (mes_sistema_ajustado >= MAX_MESES) mes_sistema_ajustado = MAX_MESES - 1;
+    
+    return mes_sistema_ajustado;
+}
+
+/**
+ * Valida automáticamente los datos importados y detecta inconsistencias
+ */
+int validarDatosImportados(struct Zona zonas[], int numZonas, int meses_detectados[]) {
+    int problemas_encontrados = 0;
+    
+    printf(ANSI_AMARILLO "\n=== VALIDACION AUTOMATICA DE DATOS ===\n" ANSI_RESET);
+    
+    for (int mes = 0; mes < MAX_MESES; mes++) {
+        if (meses_detectados[mes]) {
+            printf(ANSI_CIAN "Validando mes %d:\n" ANSI_RESET, mes + 1);
+            
+            // Verificar consistencia entre zonas
+            int dias_por_zona[MAX_ZONAS] = {0};
+            for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+                dias_por_zona[zona_idx] = zonas[zona_idx].meses[mes].numDias;
+            }
+            
+            // Buscar zonas con datos faltantes
+            int max_dias = 0;
+            for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+                if (dias_por_zona[zona_idx] > max_dias) {
+                    max_dias = dias_por_zona[zona_idx];
+                }
+            }
+            
+            for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+                if (dias_por_zona[zona_idx] < max_dias) {
+                    printf(ANSI_AMARILLO "  - %s: faltan %d dias (tiene %d, esperado %d)\n" ANSI_RESET,
+                           zonas[zona_idx].nombre, 
+                           max_dias - dias_por_zona[zona_idx],
+                           dias_por_zona[zona_idx], 
+                           max_dias);
+                    problemas_encontrados++;
+                }
+            }
+            
+            // Verificar valores extremos
+            for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+                for (int dia = 0; dia < zonas[zona_idx].meses[mes].numDias; dia++) {
+                    struct DatosAmbientales *dato = &zonas[zona_idx].meses[mes].dias[dia];
+                    
+                    if (strlen(dato->fecha) > 0) {
+                        // Verificar PM2.5 extremo
+                        if (dato->pm25 > 100) {
+                            printf(ANSI_ROJO "  - %s (%s): PM2.5 extremo %.2f ug/m3\n" ANSI_RESET,
+                                   zonas[zona_idx].nombre, dato->fecha, dato->pm25);
+                            problemas_encontrados++;
+                        }
+                        
+                        // Verificar NO2 extremo
+                        if (dato->no2 > 150) {
+                            printf(ANSI_ROJO "  - %s (%s): NO2 extremo %.2f ug/m3\n" ANSI_RESET,
+                                   zonas[zona_idx].nombre, dato->fecha, dato->no2);
+                            problemas_encontrados++;
+                        }
+                        
+                        // Verificar CO2 extremo
+                        if (dato->co2 > 0.5) {
+                            printf(ANSI_ROJO "  - %s (%s): CO2 extremo %.3f ppm\n" ANSI_RESET,
+                                   zonas[zona_idx].nombre, dato->fecha, dato->co2);
+                            problemas_encontrados++;
+                        }
+                    }
+                }
+            }
+            
+            if (problemas_encontrados == 0) {
+                printf(ANSI_VERDE "  - Datos del mes %d validados correctamente\n" ANSI_RESET, mes + 1);
+            }
+        }
+    }
+    
+    if (problemas_encontrados > 0) {
+        printf(ANSI_AMARILLO "\nSe encontraron %d problemas en los datos importados.\n" ANSI_RESET, 
+               problemas_encontrados);
+        printf(ANSI_AMARILLO "Recomendacion: Revise los datos originales y reimporte si es necesario.\n" ANSI_RESET);
+    } else {
+        printf(ANSI_VERDE "\nTodos los datos importados pasaron la validacion.\n" ANSI_RESET);
+    }
+    
+    return problemas_encontrados;
+}
+
+/**
+ * Genera un reporte de resumen de datos importados
+ */
+void generarResumenImportacion(struct Zona zonas[], int numZonas, int meses_detectados[], 
+                              int total_importados, int total_errores, int total_duplicados) {
+    printf(ANSI_AMARILLO "\n=== REPORTE DE RESUMEN DE IMPORTACION ===\n" ANSI_RESET);
+    
+    printf(ANSI_VERDE "Total de registros importados: %d\n" ANSI_RESET, total_importados);
+    printf(ANSI_AMARILLO "Total de errores: %d\n" ANSI_RESET, total_errores);
+    printf(ANSI_AMARILLO "Total de duplicados: %d\n" ANSI_RESET, total_duplicados);
+    
+    // Calcular estadísticas por mes
+    printf(ANSI_CIAN "\nEstadisticas por mes:\n" ANSI_RESET);
+    for (int mes = 0; mes < MAX_MESES; mes++) {
+        if (meses_detectados[mes]) {
+            int total_dias_mes = 0;
+            int total_registros_mes = 0;
+            
+            for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+                total_dias_mes += zonas[zona_idx].meses[mes].numDias;
+                
+                // Contar registros reales
+                for (int dia = 0; dia < zonas[zona_idx].meses[mes].numDias; dia++) {
+                    if (strlen(zonas[zona_idx].meses[mes].dias[dia].fecha) > 0) {
+                        total_registros_mes++;
+                    }
+                }
+            }
+            
+            printf("  Mes %2d: %d registros en %d zonas\n", 
+                   mes + 1, total_registros_mes, numZonas);
+        }
+    }
+    
+    // Calcular estadísticas por zona
+    printf(ANSI_CIAN "\nEstadisticas por zona:\n" ANSI_RESET);
+    for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+        int total_registros_zona = 0;
+        
+        for (int mes = 0; mes < MAX_MESES; mes++) {
+            if (meses_detectados[mes]) {
+                for (int dia = 0; dia < zonas[zona_idx].meses[mes].numDias; dia++) {
+                    if (strlen(zonas[zona_idx].meses[mes].dias[dia].fecha) > 0) {
+                        total_registros_zona++;
+                    }
+                }
+            }
+        }
+        
+        printf("  %-12s: %d registros\n", zonas[zona_idx].nombre, total_registros_zona);
+    }
+    
+    // Calcular tasas de éxito
+    float tasa_exito = (total_importados > 0) ? 
+                      ((float)total_importados / (total_importados + total_errores)) * 100 : 0;
+    
+    printf(ANSI_VERDE "\nTasa de exito: %.1f%%\n" ANSI_RESET, tasa_exito);
+    
+    if (tasa_exito < 90) {
+        printf(ANSI_AMARILLO "Recomendacion: Revise el formato de los datos de entrada.\n" ANSI_RESET);
+    }
+}
+
+/**
+ * Completa automáticamente los días faltantes con valores interpolados
+ */
+int completarDiasFaltantes(struct Zona zonas[], int numZonas, int meses_detectados[]) {
+    int dias_completados = 0;
+    
+    printf(ANSI_AMARILLO "\n=== COMPLETAR DIAS FALTANTES ===\n" ANSI_RESET);
+    
+    for (int mes = 0; mes < MAX_MESES; mes++) {
+        if (meses_detectados[mes]) {
+            printf(ANSI_CIAN "Procesando mes %d...\n" ANSI_RESET, mes + 1);
+            
+            // Encontrar el máximo número de días en este mes
+            int max_dias = 0;
+            for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+                if (zonas[zona_idx].meses[mes].numDias > max_dias) {
+                    max_dias = zonas[zona_idx].meses[mes].numDias;
+                }
+            }
+            
+            for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+                int dias_faltantes = 0;
+                
+                // Completar días faltantes hasta el máximo
+                for (int dia = zonas[zona_idx].meses[mes].numDias; dia < max_dias; dia++) {
+                    struct DatosAmbientales *dato = &zonas[zona_idx].meses[mes].dias[dia];
+                    
+                    if (strlen(dato->fecha) == 0) {
+                        // Calcular promedios de los días existentes
+                        float suma_co2 = 0, suma_so2 = 0, suma_no2 = 0, suma_pm25 = 0;
+                        int count = 0;
+                        
+                        for (int d = 0; d < zonas[zona_idx].meses[mes].numDias; d++) {
+                            if (strlen(zonas[zona_idx].meses[mes].dias[d].fecha) > 0) {
+                                suma_co2 += zonas[zona_idx].meses[mes].dias[d].co2;
+                                suma_so2 += zonas[zona_idx].meses[mes].dias[d].so2;
+                                suma_no2 += zonas[zona_idx].meses[mes].dias[d].no2;
+                                suma_pm25 += zonas[zona_idx].meses[mes].dias[d].pm25;
+                                count++;
+                            }
+                        }
+                        
+                        if (count > 0) {
+                            // Usar promedios con ligera variación aleatoria
+                            dato->co2 = (suma_co2 / count) * (0.95 + (rand() % 100) / 1000.0);
+                            dato->so2 = (suma_so2 / count) * (0.95 + (rand() % 100) / 1000.0);
+                            dato->no2 = (suma_no2 / count) * (0.95 + (rand() % 100) / 1000.0);
+                            dato->pm25 = (suma_pm25 / count) * (0.95 + (rand() % 100) / 1000.0);
+                            
+                            // Generar fecha apropiada
+                            snprintf(dato->fecha, sizeof(dato->fecha), "2025-%02d-%02d", 
+                                   mes + 1, dia + 1);
+                            
+                            dias_faltantes++;
+                            dias_completados++;
+                        }
+                    }
+                }
+                
+                // Actualizar el número de días en la zona
+                if (dias_faltantes > 0) {
+                    zonas[zona_idx].meses[mes].numDias = max_dias;
+                    printf(ANSI_VERDE "  - %s: %d dias completados\n" ANSI_RESET, 
+                           zonas[zona_idx].nombre, dias_faltantes);
+                }
+            }
+        }
+    }
+    
+    if (dias_completados > 0) {
+        printf(ANSI_VERDE "\nTotal de dias completados: %d\n" ANSI_RESET, dias_completados);
+        printf(ANSI_AMARILLO "Nota: Los valores se generaron usando promedios de datos existentes\n" ANSI_RESET);
+        
+        // Guardar los datos completados
+        for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+            for (int mes = 0; mes < MAX_MESES; mes++) {
+                if (meses_detectados[mes]) {
+                    guardarMes(&zonas[zona_idx], mes);
+                }
+            }
+        }
+    } else {
+        printf(ANSI_VERDE "No se encontraron dias faltantes para completar\n" ANSI_RESET);
+    }
+    
+    return dias_completados;
+}
+
+/**
+ * Permite al usuario elegir qué hacer con los días faltantes después de la importación
+ */
+void manejarDiasFaltantes(struct Zona zonas[], int numZonas, int meses_detectados[]) {
+    // Verificar si hay días faltantes
+    int hay_dias_faltantes = 0;
+    
+    for (int mes = 0; mes < MAX_MESES; mes++) {
+        if (meses_detectados[mes]) {
+            int max_dias = 0;
+            for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+                if (zonas[zona_idx].meses[mes].numDias > max_dias) {
+                    max_dias = zonas[zona_idx].meses[mes].numDias;
+                }
+            }
+            
+            for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+                if (zonas[zona_idx].meses[mes].numDias < max_dias) {
+                    hay_dias_faltantes = 1;
+                    break;
+                }
+            }
+            
+            if (hay_dias_faltantes) break;
+        }
+    }
+    
+    if (hay_dias_faltantes) {
+        printf(ANSI_AMARILLO "\n¿Desea completar automaticamente los dias faltantes?\n" ANSI_RESET);
+        printf("1. Si - Completar con promedios calculados\n");
+        printf("2. No - Mantener datos tal como estan\n");
+        printf(ANSI_CIAN "Seleccione una opcion: " ANSI_RESET);
+        
+        int opcion;
+        if (scanf("%d", &opcion) == 1) {
+            if (opcion == 1) {
+                completarDiasFaltantes(zonas, numZonas, meses_detectados);
+            } else {
+                printf(ANSI_AMARILLO "Datos mantenidos sin completar\n" ANSI_RESET);
+            }
+        }
+        
+        // Limpiar buffer
+        while (getchar() != '\n');
+    }
 }
