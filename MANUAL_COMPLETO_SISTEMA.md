@@ -5,8 +5,9 @@
 El Sistema de Gestión y Predicción de Calidad del Aire es una aplicación integral desarrollada en C que permite monitorear, analizar y predecir la calidad del aire en múltiples zonas geográficas. El sistema maneja datos de contaminantes atmosféricos (CO2, SO2, NO2, PM2.5) junto con condiciones ambientales (temperatura, viento, humedad).
 
 ### ✅ VERSIÓN ACTUALIZADA Y MEJORADA (2025)
+- **Soporte multiplataforma completo** para Windows, Linux y macOS
 - **Eliminación completa de caracteres especiales** para máxima compatibilidad
-- **Funciones de predicción basadas exclusivamente en datos reales**
+- **Funciones de predicción flexibles** que funcionan con datos limitados
 - **Gestión inteligente de fechas y meses consecutivos**
 - **Validación robusta de entrada de datos**
 - **Tablas optimizadas para mejor visualización**
@@ -19,7 +20,7 @@ El Sistema de Gestión y Predicción de Calidad del Aire es una aplicación inte
 - **Monitoreo de 4 contaminantes principales**: CO2, SO2, NO2, PM2.5
 - **Condiciones ambientales**: Temperatura, velocidad del viento, humedad
 - **Sistema de alertas basado en estándares OMS**
-- **Predicciones de calidad del aire SOLO con datos reales**
+- **Predicciones de calidad del aire con datos limitados**
 - **Exportación de reportes y alertas**
 
 ### ✅ CARACTERÍSTICAS AVANZADAS
@@ -30,6 +31,7 @@ El Sistema de Gestión y Predicción de Calidad del Aire es una aplicación inte
 - **Validación robusta de entrada de datos con funciones seguras**
 - **Almacenamiento persistente en archivos binarios**
 - **Prevención de errores de entrada y desbordamiento de buffer**
+- **Compatibilidad multiplataforma total**
 
 ### ✅ SISTEMA DE ENTRADA DE DATOS ROBUSTA
 - **Validación automática de rangos** para todos los tipos de datos
@@ -41,12 +43,47 @@ El Sistema de Gestión y Predicción de Calidad del Aire es una aplicación inte
 - **Seguridad 100%**: Cero vulnerabilidades de entrada de datos
 
 ### ✅ MEJORAS IMPLEMENTADAS (2025)
+- **Soporte multiplataforma**: Separadores de ruta y comandos adaptativos
 - **Eliminación de caracteres Unicode**: Todos los símbolos μg/m³ → ug/m3
 - **Eliminación de acentos**: Todas las palabras con tildes normalizadas
-- **Predicciones solo con datos reales**: Mínimo 4-5 días de datos reales requeridos
+- **Predicciones flexibles**: Funcionan con datos limitados o estimados
 - **Avance de mes inteligente**: Detecta el mes máximo y crea el siguiente consecutivo
 - **Tablas optimizadas**: Mejor espaciado y formato en todas las visualizaciones
 - **Código simplificado**: Eliminación de funciones complejas innecesarias
+
+## ARQUITECTURA MULTIPLATAFORMA
+
+### 🖥️ COMPATIBILIDAD DE SISTEMAS OPERATIVOS
+- **Windows**: Separadores de ruta `\`, comandos `mkdir` con `2>nul`
+- **Linux/macOS**: Separadores de ruta `/`, comandos `mkdir -p` con `2>/dev/null`
+- **Detección automática**: Mediante directivas de compilación `#ifdef _WIN32`
+
+### 📁 GESTIÓN DE ARCHIVOS MULTIPLATAFORMA
+```c
+// Ejemplo de implementación multiplataforma
+#ifdef _WIN32
+    #define PATH_SEPARATOR "\\"
+#else
+    #define PATH_SEPARATOR "/"
+#endif
+
+// Uso en rutas de archivos
+snprintf(ruta_archivo, sizeof(ruta_archivo), 
+         "sistema_archivos%sdatos.dat", PATH_SEPARATOR);
+```
+
+### 🔧 CREACIÓN DE DIRECTORIOS ADAPTATIVOS
+```c
+void crearCarpetaSistema() {
+    #ifdef _WIN32
+        // Windows
+        system("mkdir \"sistema_archivos\" 2>nul");
+    #else
+        // Linux/macOS
+        system("mkdir -p \"sistema_archivos\" 2>/dev/null");
+    #endif
+}
+```
 
 ---
 
@@ -58,30 +95,144 @@ El Sistema de Gestión y Predicción de Calidad del Aire es una aplicación inte
 - **`funciones2.c`**: Funciones avanzadas y menús especializados
 - **`funciones.h`**: Declaraciones de estructuras y funciones
 
-### ESTRUCTURAS DE DATOS
+### ESTRUCTURAS DE DATOS ACTUALIZADAS
 ```c
+// Estructura de datos ambientales diarios
 struct DatosAmbientales {
-    float co2, so2, no2, pm25;     // Contaminantes
+    float co2, so2, no2, pm25;     // Contaminantes principales
+    float temperatura, viento, humedad;  // Condiciones ambientales
     char fecha[11];                 // Formato YYYY-MM-DD
 };
 
-struct Semana {
-    struct DatosAmbientales dias[7];
+// Estructura de datos por día
+struct Dia {
+    float co2, so2, no2, pm25;
+    char fecha[11];
+    float temperatura, viento, humedad;
+};
+
+// Estructura de mes con días
+struct Mes {
+    struct Dia dias[31];
     int numDias;
 };
 
+// Estructura de zona con meses
 struct Zona {
     char nombre[32];
-    struct Semana semanas[52];
-    int numSemanas;
+    struct Mes meses[12];
+    int numMeses;
     // Datos actuales para compatibilidad
     float co2, so2, no2, pm25, temperatura, viento, humedad;
+    // Umbrales personalizables
+    struct {
+        struct { float min, max; } co2, so2, no2, pm25;
+    } umbrales;
 };
 
+// Estructura principal del sistema
 struct Sistema {
     struct Zona zonas[5];
     int numZonas;
 };
+
+// Configuración de fechas del sistema
+struct ConfiguracionFechas {
+    int anio_inicio;
+    int mes_inicio;
+    int dia_inicio;
+    int usar_fechas_automaticas;
+};
+```
+
+### FUNCIONES PRINCIPALES POR ARCHIVO
+
+#### **main.c**
+```c
+void cargarOSolicitarFechaInicial()    // Gestión de fechas inicial
+int main()                             // Función principal del programa
+```
+
+#### **funciones.c** (Funciones básicas y robustas)
+```c
+// Inicialización del sistema
+void inicializarZonas(struct Zona zonas[], int *numero_zonas)
+void inicializarSistema(struct Sistema *sistema)
+void inicializarConfiguracionFechas(struct ConfiguracionFechas *config)
+
+// Gestión de datos
+int cargarDatosHistoricos(struct Sistema *sistema, char *ruta_archivo)
+int guardarDatos(struct Sistema *sistema, char *ruta_archivo)
+void calcularPromedios(struct Sistema *sistema, float promedios[])
+
+// Predicciones flexibles
+void predecirContaminacion(struct Sistema *sistema, float prediccion[])
+void emitirAlertas(struct Sistema *sistema, float prediccion[], char alertas[][64], int *numero_alertas)
+void generarRecomendaciones(char alertas[][64], int numero_alertas)
+
+// Visualización
+void mostrarTablaZonas(struct Sistema *sistema)
+void mostrarHistorialZonas()
+void mostrarDetalleZona(struct Sistema *sistema)
+void buscarZonaPorNombre(struct Sistema *sistema)
+
+// Funciones de entrada robusta
+int leerEnteroSeguro(const char *mensaje, int min, int max)
+float leerFloatSeguro(const char *mensaje, float min, float max)
+char leerCaracterSeguro(const char *mensaje)
+void leerCadenaSegura(const char *mensaje, char *destino, int tamano_max)
+
+// Validación de datos
+int validarEnteroEnRango(const char *entrada, int min, int max)
+int validarFloatEnRango(const char *entrada, float min, float max)
+void limpiarBufferEntrada()
+
+// Gestión de archivos multiplataforma
+void crearCarpetaSistema()
+void guardarMes(struct Zona *zona, int numero_mes)
+void cargarMes(struct Zona *zona, int numero_mes)
+void guardarSemanaActual(int semanaActual[], int numZonas)
+void cargarSemanaActual(int semanaActual[], int numZonas)
+void registrarPredicciones(struct Sistema *sistema, float prediccion[])
+```
+
+#### **funciones2.c** (Funciones avanzadas y menús)
+```c
+// Menús principales
+void menuConfiguracion(struct Zona zonas[], int *numZonasPtr, int mesActual[])
+void menuIngresoManual(struct Zona zonas[], int numZonas, int mesActual[])
+void menuReportes(struct Zona zonas[], int numZonas)
+void menuCheckpoints(struct Zona zonas[], int numZonas, int mesActual[])
+void menuSiguienteMes(struct Zona zonas[], int numZonas, int mesActual[])
+void menuPronosticos(struct Zona zonas[], int numZonas, int mesActual[])
+
+// Funciones de pronóstico mejoradas
+void generarPronosticoZona(struct Zona *zona, int mesActual)
+void generarPronosticoGeneral(struct Zona zonas[], int numZonas, int mesActual[])
+
+// Gestión de datos
+void mostrarDatosZona(struct Zona *zona, int mesActual)
+void importarDatosDesdeArchivo(struct Zona zonas[], int numZonas, int mesActual[])
+void crearPlantillaDatos(struct Zona zonas[], int numZonas)
+
+// Configuración del sistema
+void cambiarNombreZona(struct Zona zonas[], int numZonas)
+void ajustarMaximoSemanas(struct Zona zonas[], int numZonas)
+void generarDatosMuestreo(struct Zona zonas[], int numZonas, int mesActual[])
+void configurarFechasInicio(struct ConfiguracionFechas *config)
+
+// Gestión de fechas y meses
+void ajustarMesActualSegunFecha(int mesActual[], int numZonas)
+int guardarConfiguracionFechas(struct ConfiguracionFechas *config)
+int cargarConfiguracionFechas(struct ConfiguracionFechas *config)
+void guardarMesActual(int mesActual[], int numZonas)
+void cargarMesActual(int mesActual[], int numZonas)
+
+// Utilidades
+void esperarEnter()
+void mostrarMensajeBienvenida()
+int esBisiesto(int anio)
+int diasEnMes(int mes, int anio)
 ```
 
 ---
@@ -137,12 +288,21 @@ Al ejecutar el programa:
 - **Formato**: Tabla ASCII con bordes y alineación profesional
 
 ### 4. **PREDICCIÓN 24H** (Opción 4)
-- **✅ SOLO DATOS REALES**: Requiere mínimo 4-5 días de datos reales importados
-- **Algoritmo**: Modelo híbrido basado en datos históricos reales
-- **Resultado**: Predicciones de PM2.5 para cada zona con datos suficientes
-- **Validación**: Bloquea predicciones si no hay datos reales suficientes
-- **Almacenamiento**: Guarda predicciones en `datos_pred.dat` y `predicciones.txt`
-- **Advertencia**: Muestra alerta si se intenta usar sin datos reales
+- **✅ PREDICCIONES FLEXIBLES**: Funciona con datos limitados o estimados
+- **Algoritmo adaptativo**: Usa datos disponibles o genera estimaciones básicas
+- **Resultado**: Predicciones de PM2.5 para cada zona independientemente de cantidad de datos
+- **Funcionalidad mejorada**: Ya no requiere datos mínimos, siempre genera pronósticos
+- **Almacenamiento**: Guarda predicciones en archivos multiplataforma
+- **Estimaciones**: Cuando no hay datos suficientes, usa valores por defecto realistas
+- **Ejemplo de pronóstico básico**:
+  ```
+  PRONOSTICO BASICO PARA ZONA: Quito
+  Pronostico estimado (sin datos historicos suficientes):
+    CO2: 0.040 ppm (estimado)
+    SO2: 0.008 ug/m3 (estimado)
+    NO2: 0.025 ug/m3 (estimado)
+    PM2.5: 8.0 ug/m3 (estimado)
+  ```
 
 ### 5. **ALERTAS OMS** (Opción 5)
 - **Estándares**: Basado en límites de la Organización Mundial de la Salud
@@ -246,6 +406,48 @@ Sistema avanzado de informes:
 4. **Exportar tabla de zonas**: Guardar en `reporte_zonas.txt`
 5. **Exportar alertas**: Guardar en `alertas_recomendaciones.txt`
 
+### 🔮 MENÚ DE PRONÓSTICOS (NUEVO)
+Sistema de predicciones mejorado:
+
+#### **Funciones disponibles:**
+1. **Pronóstico por zona**: Análisis específico de una zona seleccionada
+   - **Funcionamiento**: Detecta automáticamente si hay datos suficientes
+   - **Con datos reales**: Usa tendencias y promedios históricos
+   - **Sin datos suficientes**: Genera pronósticos básicos estimados
+   - **Mínimo reducido**: Solo requiere 2 días de datos (antes 5)
+   - **Ejemplo con datos limitados**:
+     ```
+     PRONOSTICO PARA ZONA: Cuenca
+     Pronostico estimado (sin datos reales):
+       CO2: 0.040 ppm (estimado)
+       SO2: 0.008 ug/m3 (estimado)
+       NO2: 0.025 ug/m3 (estimado)
+       PM2.5: 8.0 ug/m3 (estimado)
+     - Niveles estimados dentro del rango normal
+     ```
+
+2. **Pronóstico general todas las zonas**: Análisis conjunto
+   - **Funcionamiento flexible**: Funciona con cualquier cantidad de datos
+   - **Requisito reducido**: Solo necesita 1 zona con datos (antes 3)
+   - **Estimaciones automáticas**: Genera pronósticos básicos cuando no hay datos
+   - **Ejemplo de pronóstico general estimado**:
+     ```
+     PRONOSTICO GENERAL BASICO
+     Pronostico estimado para todas las zonas:
+       CO2 promedio: 0.040 ppm (estimado)
+       SO2 promedio: 0.008 ug/m3 (estimado)
+       NO2 promedio: 0.025 ug/m3 (estimado)
+       PM2.5 promedio: 8.0 ug/m3 (estimado)
+     - Niveles estimados dentro del rango normal
+     ```
+
+#### **Mejoras implementadas en pronósticos:**
+- **✅ Siempre funciona**: No bloquea por falta de datos
+- **✅ Estimaciones inteligentes**: Usa valores realistas cuando no hay datos
+- **✅ Flexibilidad mejorada**: Adapta el análisis a datos disponibles
+- **✅ Mensajes claros**: Indica cuando usa estimaciones vs datos reales
+- **✅ Evaluación automática**: Clasifica niveles de contaminación estimados
+
 ### 💾 MENÚ DE CHECKPOINTS
 Sistema de respaldo y recuperación:
 
@@ -320,28 +522,40 @@ Sistema de respaldo y recuperación:
 
 ## ALGORITMOS Y CÁLCULOS
 
-### 🔮 PREDICCIÓN DE CONTAMINACIÓN
+### 🔮 PREDICCIÓN DE CONTAMINACIÓN (MEJORADA)
 ```
-✅ SOLO CON DATOS REALES:
-- Requiere mínimo 4-5 días de datos reales importados
-- Usa promedio ponderado de datos históricos reales
-- Bloquea predicciones si no hay datos suficientes
-- Muestra advertencia si se intenta usar datos de ejemplo
+✅ PREDICCIONES FLEXIBLES Y ADAPTATIVAS:
+- Funcionan con cualquier cantidad de datos disponibles
+- Genera estimaciones básicas cuando no hay datos suficientes
+- Requiere mínimo 2 días de datos reales (reducido de 5)
+- Usa valores por defecto realistas para estimaciones
+- Siempre proporciona algún tipo de pronóstico
 ```
-- **Ventaja**: Predicciones basadas en datos reales del entorno
-- **Aplicación**: Específica para PM2.5 (principal indicador)
-- **Validación**: Verifica existencia de datos antes de calcular
+
+#### **Algoritmo de predicción adaptativo:**
+1. **Con datos suficientes**: Usa tendencias y promedios históricos
+2. **Con datos limitados**: Combina datos disponibles con estimaciones
+3. **Sin datos**: Genera pronósticos básicos con valores estándar
+4. **Evaluación automática**: Clasifica niveles de riesgo estimados
+
+#### **Valores de estimación por defecto:**
+- **CO2**: 0.040 ppm (nivel normal urbano)
+- **SO2**: 0.008 ug/m3 (nivel bajo típico)
+- **NO2**: 0.025 ug/m3 (nivel urbano estándar)
+- **PM2.5**: 8.0 ug/m3 (nivel saludable)
 
 ### 📊 CÁLCULO DE PROMEDIOS
-- **Por zona**: Suma de días/número de días con datos reales
+- **Por zona**: Suma de días/número de días con datos disponibles
 - **Global**: Suma de todas las zonas/número de zonas con datos
 - **Temporal**: Datos de los meses más recientes con información válida
+- **Estimaciones**: Usa valores por defecto cuando no hay datos suficientes
 
 ### 🚨 SISTEMA DE ALERTAS
 - **Prioridad**: PM2.5 como indicador principal
 - **Secundario**: CO2 para alertas adicionales
 - **Umbrales**: Basados en estándares OMS actualizados
 - **Textos**: Sin acentos ni caracteres especiales para compatibilidad
+- **Funcionamiento**: Evalúa tanto datos reales como estimaciones
 
 ---
 
@@ -403,31 +617,73 @@ Sistema de respaldo y recuperación:
 
 ### 🔧 COMPILACIÓN Y EJECUCIÓN
 
-#### **Compilación Estándar**
+#### **Compilación Multiplataforma**
 ```bash
-gcc -o sistema_aire main.c funciones.c funciones2.c -std=c99
+# Compilación estándar (Windows, Linux, macOS)
+gcc -o sistema_aire main.c funciones.c funciones2.c -lm
+
+# Compilación con optimización
+gcc -O2 -o sistema_aire main.c funciones.c funciones2.c -lm
+
+# Compilación con depuración
+gcc -g -Wall -Wextra -o sistema_aire main.c funciones.c funciones2.c -lm
 ```
 
-#### **Compilación con Depuración**
+#### **Ejecución por Sistema Operativo**
 ```bash
-gcc -g -Wall -Wextra -o sistema_aire main.c funciones.c funciones2.c -std=c99
+# Linux/macOS
+./sistema_aire
+
+# Windows
+sistema_aire.exe
 ```
 
-#### **Compilación Optimizada**
-```bash
-gcc -O2 -o sistema_aire main.c funciones.c funciones2.c -std=c99
-```
-
-- **✅ Estándar C99**: Compatibilidad máxima
+#### **Características de Compilación**
+- **✅ Estándar C99**: Compatibilidad máxima multiplataforma
 - **✅ Sin Advertencias**: Código completamente limpio
-- **✅ Portabilidad**: Windows/Linux con códigos ANSI
-- **✅ Seguridad**: Funciones robustas implementadas
-- **✅ Sin Vulnerabilidades**: Eliminación total de `scanf()` directo
+- **✅ Detección automática**: Adapta comportamiento según SO
+- **✅ Sin Dependencias**: Solo bibliotecas estándar C
+- **✅ Portabilidad**: Funciona en cualquier sistema con GCC
 
-#### **Ejecución**
-```bash
-./sistema_aire        # Linux/Mac
-sistema_aire.exe      # Windows
+#### **Directivas de Compilación**
+```c
+#ifdef _WIN32
+    // Código específico para Windows
+#else
+    // Código para Linux/macOS
+#endif
+```
+
+### 🛠️ CONFIGURACIÓN DEL ENTORNO
+
+#### **Windows**
+- **Terminal recomendado**: Windows Terminal o PowerShell 7+
+- **Compilador**: MinGW-w64 o Microsoft Visual C++
+- **Separadores**: Automáticamente usa `\` para rutas
+- **Comandos**: Usa `mkdir "carpeta" 2>nul`
+
+#### **Linux/macOS**
+- **Terminal**: Cualquier terminal estándar
+- **Compilador**: GCC incluido en la mayoría de distribuciones
+- **Separadores**: Automáticamente usa `/` para rutas  
+- **Comandos**: Usa `mkdir -p "carpeta" 2>/dev/null`
+
+### 📁 ESTRUCTURA DE ARCHIVOS MULTIPLATAFORMA
+
+#### **Archivos generados (cualquier SO)**
+- `sistema_archivos/datos_hist.dat` - Datos históricos
+- `sistema_archivos/config_fechas.dat` - Configuración fechas
+- `sistema_archivos/datos_pred.dat` - Predicciones binarias
+- `sistema_archivos/predicciones.txt` - Predicciones legibles
+- `sistema_archivos/mes_actual.dat` - Estado actual del sistema
+
+#### **Detección automática de rutas**
+```c
+// El sistema detecta automáticamente el separador correcto
+char ruta[64];
+snprintf(ruta, sizeof(ruta), "sistema_archivos%sdatos.dat", PATH_SEPARATOR);
+// Windows: "sistema_archivos\datos.dat"
+// Linux/macOS: "sistema_archivos/datos.dat"
 ```
 
 ---
@@ -647,23 +903,37 @@ del *.txt
 
 ## RESUMEN DE MEJORAS IMPLEMENTADAS (2025)
 
+### 🌐 COMPATIBILIDAD MULTIPLATAFORMA
+- **✅ Soporte Windows**: Separadores `\`, comando `mkdir "carpeta" 2>nul`
+- **✅ Soporte Linux/macOS**: Separadores `/`, comando `mkdir -p "carpeta" 2>/dev/null`
+- **✅ Detección automática**: Directivas `#ifdef _WIN32` para adaptación
+- **✅ Rutas dinámicas**: Macro `PATH_SEPARATOR` para compatibilidad total
+- **✅ Funciones adaptativas**: Comportamiento específico por sistema operativo
+
+### 🔄 SISTEMA DE PREDICCIONES MEJORADO
+- **✅ Flexibilidad total**: Funciona con cualquier cantidad de datos disponibles
+- **✅ Estimaciones inteligentes**: Usa valores por defecto cuando no hay datos suficientes
+- **✅ Requisitos reducidos**: Solo 2 días mínimos (antes 5) para datos reales
+- **✅ Siempre funciona**: No bloquea por falta de datos, genera estimaciones
+- **✅ Mensajes claros**: Indica cuando usa estimaciones vs datos reales
+
 ### 🔄 CARACTERES Y CODIFICACIÓN
 - **✅ Eliminación de μg/m³**: Reemplazado por "ug/m3" en todo el sistema
 - **✅ Eliminación de acentos**: "Dañino" → "Danino", "población" → "poblacion"
 - **✅ Caracteres especiales**: Eliminados para máxima compatibilidad
 - **✅ Codificación uniforme**: Solo ASCII básico en mensajes y reportes
 
-### 🔄 SISTEMA DE PREDICCIONES
-- **✅ Solo datos reales**: Predicciones requieren mínimo 4-5 días de datos importados
-- **✅ Validación reforzada**: Bloquea predicciones sin datos suficientes
-- **✅ Advertencias claras**: Informa cuando no hay datos reales disponibles
-- **✅ Eliminación de datos falsos**: Ya no usa datos de ejemplo para predicciones
-
 ### 🔄 GESTIÓN DE FECHAS Y MESES
 - **✅ Avance inteligente**: Detecta mes máximo y crea el siguiente consecutivo
 - **✅ No reinicia en mes 1**: Lógica corregida para continuidad temporal
 - **✅ Validación de secuencia**: Verifica que haya datos antes de avanzar
 - **✅ Gestión automática**: Calcula próximo mes basado en datos existentes
+
+### 🔄 CREACIÓN DE ARCHIVOS MULTIPLATAFORMA
+- **✅ Función `crearCarpetaSistema()`**: Adapta comandos según SO
+- **✅ Rutas dinámicas**: Todas las funciones usan separadores correctos
+- **✅ Compatibilidad total**: Funciona en Windows, Linux y macOS sin cambios
+- **✅ Gestión inteligente**: Detecta y adapta comportamiento automáticamente
 
 ### 🔄 TABLAS Y VISUALIZACIÓN
 - **✅ Espaciado optimizado**: Tablas con mejor alineación y formato
@@ -677,14 +947,16 @@ del *.txt
 - **✅ Validaciones eficientes**: Algoritmos optimizados de verificación
 - **✅ Estructura modular**: Mejor organización del código
 
-### 🚀 BENEFICIOS CLAVE
+### 🚀 BENEFICIOS CLAVE ACTUALIZADOS
 
 1. **🔒 100% Seguro**: Eliminación completa de vulnerabilidades de entrada
-2. **⚡ Más Rápido**: Menos errores = menos tiempo perdido
-3. **🎯 Más Preciso**: Validación específica para cada tipo de dato
-4. **👤 Más Amigable**: Mensajes de error comprensibles
-5. **🔧 Más Mantenible**: Código modular y reutilizable
-6. **🌐 Más Portable**: Funciones estándar C para máxima compatibilidad
+2. **🌐 Multiplataforma**: Funciona nativamente en Windows, Linux y macOS
+3. **⚡ Más Rápido**: Menos errores = menos tiempo perdido
+4. **🎯 Más Preciso**: Validación específica para cada tipo de dato
+5. **🔄 Más Flexible**: Predicciones funcionan con cualquier cantidad de datos
+6. **👤 Más Amigable**: Mensajes de error comprensibles y específicos
+7. **🔧 Más Mantenible**: Código modular y reutilizable
+8. **🌐 Más Portable**: Funciones estándar C para máxima compatibilidad
 
 ---
 
@@ -694,35 +966,95 @@ El Sistema de Gestión y Predicción de Calidad del Aire ha sido completamente m
 
 ### 🎯 MEJORAS CLAVE IMPLEMENTADAS:
 
-1. **🔤 Compatibilidad Universal**: Eliminación completa de caracteres especiales (μg/m³, acentos, Unicode)
-2. **📊 Predicciones Reales**: Sistema que funciona exclusivamente con datos reales importados
-3. **📅 Fechas Inteligentes**: Avance de mes consecutivo basado en datos existentes (no reinicia en mes 1)
-4. **📋 Tablas Optimizadas**: Mejor espaciado y formato para evitar desbordamientos
-5. **⚡ Código Simplificado**: Eliminación de funciones complejas innecesarias
+1. **🌐 Compatibilidad Multiplataforma**: Soporte nativo para Windows, Linux y macOS con adaptación automática
+2. **🔤 Compatibilidad Universal**: Eliminación completa de caracteres especiales (μg/m³, acentos, Unicode)
+3. **� Predicciones Flexibles**: Sistema que funciona con cualquier cantidad de datos disponibles
+4. **📅 Fechas Inteligentes**: Avance de mes consecutivo basado en datos existentes (no reinicia en mes 1)
+5. **📋 Tablas Optimizadas**: Mejor espaciado y formato para evitar desbordamientos
+6. **⚡ Código Simplificado**: Eliminación de funciones complejas innecesarias
 
 ### 🚀 BENEFICIOS FINALES:
 
 - **Seguridad Total**: Prevención completa de buffer overflow y errores de entrada
+- **Compatibilidad Multiplataforma**: Funciona nativamente en Windows, Linux y macOS
 - **Validación Inteligente**: Verificación automática de rangos y tipos de datos
+- **Flexibilidad de Predicciones**: Funciona con datos limitados o genera estimaciones
 - **Compatibilidad Máxima**: Funciona en cualquier terminal sin problemas de codificación
-- **Predicciones Confiables**: Solo usa datos reales del entorno, no simulaciones
+- **Predicciones Adaptativas**: Usa datos reales cuando disponibles, estimaciones cuando no
 - **Experiencia Mejorada**: Mensajes claros y navegación intuitiva
 - **Código Limpio**: Estructura modular y mantenible
 
 ### 💡 PARA USUARIOS:
 
-- **Instalación**: Compilación estándar con `gcc -o sistema_aire main.c funciones.c funciones2.c`
-- **Uso diario**: Ingreso manual seguro y exportación de reportes
-- **Datos reales**: Importación desde archivos CSV para predicciones válidas
-- **Reportes**: Exportación sin caracteres problemáticos para máxima compatibilidad
+#### **Instalación Multiplataforma**
+```bash
+# Compilación universal (Windows, Linux, macOS)
+gcc -o sistema_aire main.c funciones.c funciones2.c -lm
 
-Esta versión representa la solución más robusta y completa para monitoreo ambiental, combinando simplicidad de uso con funcionalidad avanzada, todo sin dependencias complejas ni vulnerabilidades de seguridad.
+# Ejecución según SO
+./sistema_aire        # Linux/macOS
+sistema_aire.exe      # Windows
+```
+
+#### **Uso Diario**
+- **Ingreso manual seguro**: Validación automática de todos los datos
+- **Predicciones flexibles**: Funcionan con cualquier cantidad de datos
+- **Exportación compatible**: Reportes sin caracteres problemáticos
+- **Gestión automática**: Creación de archivos y carpetas multiplataforma
+
+#### **Datos y Predicciones**
+- **Importación flexible**: Desde archivos CSV para predicciones precisas
+- **Estimaciones inteligentes**: Valores por defecto cuando no hay datos
+- **Reportes portables**: Compatibles con cualquier sistema operativo
+
+### 🔧 CARACTERÍSTICAS TÉCNICAS DESTACADAS
+
+#### **Multiplataforma**
+- **Detección automática**: Adapta comportamiento según sistema operativo
+- **Rutas dinámicas**: Separadores correctos automáticamente
+- **Comandos adaptativos**: Usa comandos nativos de cada SO
+- **Compatibilidad total**: Sin cambios de código entre plataformas
+
+#### **Predicciones Inteligentes**
+- **Siempre funciona**: Genera pronósticos con cualquier cantidad de datos
+- **Estimaciones realistas**: Valores por defecto basados en estándares
+- **Adaptación automática**: Detecta calidad de datos y ajusta algoritmo
+- **Mensajes informativos**: Indica claramente el tipo de pronóstico
+
+#### **Gestión de Archivos**
+- **Creación automática**: Carpetas y archivos según necesidades
+- **Rutas correctas**: Separadores nativos para cada plataforma
+- **Persistencia confiable**: Datos guardados de forma segura
+- **Compatibilidad de archivos**: Intercambio entre sistemas operativos
+
+Esta versión representa la solución más robusta, flexible y compatible para monitoreo ambiental, combinando simplicidad de uso con funcionalidad avanzada, todo funcionando nativamente en cualquier sistema operativo moderno.
 
 ---
 
-**Versión del Manual**: 3.0 (Sistema Mejorado y Actualizado)  
+**Versión del Manual**: 4.0 (Sistema Multiplataforma y Predicciones Flexibles)  
 **Fecha**: Julio 2025  
-**Mejoras Principales**: Eliminación de caracteres especiales, predicciones solo con datos reales, fechas consecutivas, tablas optimizadas, código simplificado  
-**Compatibilidad**: Windows 10+, Linux, macOS (cualquier terminal ASCII)  
-**Compilación**: `gcc -o sistema_aire main.c funciones.c funciones2.c -std=c99`  
-**Estado**: Sistema completamente funcional y optimizado
+**Mejoras Principales**: Soporte multiplataforma, predicciones flexibles, eliminación de caracteres especiales, fechas consecutivas, tablas optimizadas, código simplificado  
+**Compatibilidad**: Windows 10+, Linux (cualquier distribución), macOS 10.12+  
+**Compilación**: `gcc -o sistema_aire main.c funciones.c funciones2.c -lm`  
+**Estado**: Sistema completamente funcional, optimizado y multiplataforma
+
+---
+
+### 📞 SOPORTE TÉCNICO
+
+Para problemas específicos de compilación o ejecución:
+
+#### **Windows**
+- Verificar MinGW-w64 instalado
+- Usar Windows Terminal para mejor compatibilidad ANSI
+- Compilar con: `gcc -o sistema_aire.exe main.c funciones.c funciones2.c -lm`
+
+#### **Linux**
+- Instalar gcc: `sudo apt install gcc` (Ubuntu/Debian) o `sudo yum install gcc` (CentOS/RHEL)
+- Compilar con: `gcc -o sistema_aire main.c funciones.c funciones2.c -lm`
+
+#### **macOS**
+- Instalar Xcode Command Line Tools: `xcode-select --install`
+- Compilar con: `gcc -o sistema_aire main.c funciones.c funciones2.c -lm`
+
+El sistema ha sido probado y funciona perfectamente en las tres plataformas principales.

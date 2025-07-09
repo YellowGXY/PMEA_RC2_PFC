@@ -17,16 +17,16 @@ struct ConfiguracionFechas config_fechas = {2025, 1, 1, 1};
 
 // Funcion para cargar o solicitar fecha inicial al usuario
 void cargarOSolicitarFechaInicial() {
-    // Intentar cargar configuración existente
+    // Intentar cargar configuracion existente
     if (cargarConfiguracionFechas(&config_fechas)) {
-        // Configuración cargada exitosamente
+        // Configuracion cargada exitosamente
         printf(ANSI_VERDE "Configuracion de fechas cargada exitosamente.\n" ANSI_RESET);
         printf(ANSI_CIAN "Fecha del sistema: %02d/%02d/%d\n" ANSI_RESET,
                config_fechas.dia_inicio, config_fechas.mes_inicio, config_fechas.anio_inicio);
         return;
     }
     
-    // Si no existe configuración, solicitar al usuario
+    // Si no existe configuracion, solicitar al usuario
     printf(ANSI_NEGRITA ANSI_CIAN "\n+-----------------------------------------------+\n");
     printf("|        CONFIGURACION INICIAL DEL SISTEMA     |\n");
     printf("+-----------------------------------------------+\n" ANSI_RESET);
@@ -42,7 +42,7 @@ void cargarOSolicitarFechaInicial() {
     printf(ANSI_VERDE "Fecha establecida: %02d/%02d/%d\n" ANSI_RESET, 
            config_fechas.dia_inicio, config_fechas.mes_inicio, config_fechas.anio_inicio);
     
-    // Guardar la configuración para futuras ejecuciones
+    // Guardar la configuracion para futuras ejecuciones
     guardarConfiguracionFechas(&config_fechas);
     printf(ANSI_CIAN "Continuando al menu principal...\n" ANSI_RESET);
 }
@@ -62,7 +62,7 @@ int main() {
     int numZonas = MAX_ZONAS;
     int mesActual[MAX_ZONAS] = {0};
 
-    // Cargar configuración de fechas o solicitarla si es la primera vez
+    // Cargar configuracion de fechas o solicitarla si es la primera vez
     cargarOSolicitarFechaInicial();
 
     inicializarZonas(zonas, &numZonas);
@@ -76,7 +76,7 @@ int main() {
     // Ajustar mes actual basado en la fecha del sistema
     ajustarMesActualSegunFecha(mesActual, numZonas);
 
-    // Mostrar información de inicio
+    // Mostrar informacion de inicio
     printf(ANSI_VERDE "Sistema iniciado en el mes: %d (basado en fecha actual: %02d/%02d/%d)\n" ANSI_RESET,
            mesActual[0] + 1, config_fechas.dia_inicio, config_fechas.mes_inicio, config_fechas.anio_inicio);
 
@@ -112,7 +112,7 @@ int main() {
             for (int i = 0; i < numZonas; i++) {
                 guardarMes(&zonas[i], mesActual[i]);
             }
-            // Guardar configuración de fechas al salir
+            // Guardar configuracion de fechas al salir
             guardarConfiguracionFechas(&config_fechas);
             // Guardar estado de meses actuales
             guardarMesActual(mesActual, numZonas);

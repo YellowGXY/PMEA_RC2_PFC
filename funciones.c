@@ -3,6 +3,13 @@
 #include <string.h>
 #include "funciones.h"
 
+// Separador de rutas multiplataforma
+#ifdef _WIN32
+    #define PATH_SEPARATOR "\\"
+#else
+    #define PATH_SEPARATOR "/"
+#endif
+
 // Definiciones de colores ANSI
 #define ANSI_RESET   "\x1b[0m"
 #define ANSI_NEGRITA "\x1b[1m"
@@ -24,7 +31,7 @@
 #define MAX_PM25 500.0f
 #define MAX_OTHER_CONTAMINANTS 1.0f
 
-// Límites OMS para contaminantes
+// Limites OMS para contaminantes
 #define OMS_PM25_BUENO 12.0f
 #define OMS_PM25_MODERADO 35.0f
 #define OMS_PM25_NO_SALUDABLE 55.0f
@@ -48,7 +55,7 @@ void inicializarZonas(struct Zona zonas[], int *numero_zonas) {
             zonas[indice_zona].meses[indice_mes].numDias = 0;
         }
         
-        // Establecer umbrales por defecto basados en estándares internacionales
+        // Establecer umbrales por defecto basados en estandares internacionales
         zonas[indice_zona].umbrales.co2.min = 380; 
         zonas[indice_zona].umbrales.co2.max = 450;
         zonas[indice_zona].umbrales.so2.min = 5;   
@@ -72,7 +79,7 @@ void inicializarConfiguracionFechas(struct ConfiguracionFechas *config) {
 }
 
 /**
-// Inicializa el sistema con datos NORMALES/SALUDABLES de demostración
+// Inicializa el sistema con datos NORMALES/SALUDABLES de demostracion
 // Los valores son intencionalmente bajos para mostrar estado saludable inicial
 // Usar "Generar datos de muestreo" (Configuracion) para datos variados con alertas
  */
@@ -164,7 +171,7 @@ void calcularPromedios(struct Sistema *sistema, float promedios[]) {
         sumas[3] += sistema->zonas[indice_zona].pm25;
     }
     
-    // Calcular promedios dividiendo por el número de zonas
+    // Calcular promedios dividiendo por el numero de zonas
     for (int indice_contaminante = 0; indice_contaminante < 4; indice_contaminante++) {
         if (sistema->numZonas > 0) {
             promedios[indice_contaminante] = sumas[indice_contaminante] / sistema->numZonas;
@@ -177,12 +184,12 @@ void calcularPromedios(struct Sistema *sistema, float promedios[]) {
 /**
  * Predice la contaminacion para las proximas 24 horas usando un modelo ponderado
  * Guarda las predicciones en el array prediccion
- * NOTA: Esta función está obsoleta y solo se mantiene para compatibilidad
- * Se recomienda usar las funciones de pronóstico basadas en datos reales del menú de pronósticos
+ * NOTA: Esta funcion esta obsoleta y solo se mantiene para compatibilidad
+ * Se recomienda usar las funciones de pronostico basadas en datos reales del menu de pronosticos
  */
 void predecirContaminacion(struct Sistema *sistema, float prediccion[]) {
-    printf(ANSI_AMARILLO "ADVERTENCIA: Esta función usa datos de ejemplo del sistema básico.\n" ANSI_RESET);
-    printf(ANSI_AMARILLO "Para pronósticos con datos reales, use: Menu Principal > Reportes > Pronósticos\n" ANSI_RESET);
+    printf(ANSI_AMARILLO "ADVERTENCIA: Esta funcion usa datos de ejemplo del sistema basico.\n" ANSI_RESET);
+    printf(ANSI_AMARILLO "Para pronosticos con datos reales, use: Menu Principal > Reportes > Pronosticos\n" ANSI_RESET);
     
     float promedios[4];
     calcularPromedios(sistema, promedios);
@@ -196,7 +203,9 @@ void predecirContaminacion(struct Sistema *sistema, float prediccion[]) {
     
     // Guardar predicciones en archivo binario para analisis posterior
     crearCarpetaSistema();
-    FILE *archivo = fopen("sistema_archivos\\datos_pred.dat", "wb");
+    char ruta_predicciones[64];
+    snprintf(ruta_predicciones, sizeof(ruta_predicciones), "sistema_archivos%sdatos_pred.dat", PATH_SEPARATOR);
+    FILE *archivo = fopen(ruta_predicciones, "wb");
     if (archivo) {
         fwrite(prediccion, sizeof(float), sistema->numZonas, archivo);
         fclose(archivo);
@@ -237,7 +246,7 @@ void generarRecomendaciones(char alertas[][64], int numero_alertas) {
     
     printf("Recomendaciones:\n");
     
-    // Mostrar recomendaciones específicas para cada alerta
+    // Mostrar recomendaciones especificas para cada alerta
     for (int indice_alerta = 0; indice_alerta < numero_alertas; indice_alerta++) {
         printf("- %s: Limite actividades al aire libre.\n", alertas[indice_alerta]);
     }
@@ -274,7 +283,7 @@ void mostrarTablaZonas(struct Sistema *sistema) {
 // ===============================
 
 /**
- * Limpia el buffer de entrada estándar
+ * Limpia el buffer de entrada estandar
  */
 void limpiarBufferEntrada() {
     int c;
@@ -282,8 +291,8 @@ void limpiarBufferEntrada() {
 }
 
 /**
- * Valida que una cadena contenga un entero válido dentro del rango especificado
- * Retorna 1 si es válido, 0 si no
+ * Valida que una cadena contenga un entero valido dentro del rango especificado
+ * Retorna 1 si es valido, 0 si no
  */
 int validarEnteroEnRango(const char *entrada, int min, int max) {
     char *endptr;
@@ -303,8 +312,8 @@ int validarEnteroEnRango(const char *entrada, int min, int max) {
 }
 
 /**
- * Valida que una cadena contenga un float válido dentro del rango especificado
- * Retorna 1 si es válido, 0 si no
+ * Valida que una cadena contenga un float valido dentro del rango especificado
+ * Retorna 1 si es valido, 0 si no
  */
 int validarFloatEnRango(const char *entrada, float min, float max) {
     char *endptr;
@@ -324,7 +333,7 @@ int validarFloatEnRango(const char *entrada, float min, float max) {
 }
 
 /**
- * Lee un entero de forma segura con validación de rango
+ * Lee un entero de forma segura con validacion de rango
  */
 int leerEnteroSeguro(const char *mensaje, int min, int max) {
     char buffer[256];
@@ -446,7 +455,9 @@ void leerCadenaSegura(const char *mensaje, char *destino, int tamano_max) {
  */
 void mostrarHistorialZonas() {
     struct Sistema sistema;
-    FILE *archivo = fopen("sistema_archivos\\datos_hist.dat", "rb");
+    char ruta_historial[64];
+    snprintf(ruta_historial, sizeof(ruta_historial), "sistema_archivos%sdatos_hist.dat", PATH_SEPARATOR);
+    FILE *archivo = fopen(ruta_historial, "rb");
     
     if (!archivo) {
         printf("No hay historial disponible.\n");
@@ -594,7 +605,9 @@ void mostrar_alerta(float pm25, char* zona) {
  */
 void registrarPredicciones(struct Sistema *sistema, float prediccion[]) {
     crearCarpetaSistema();
-    FILE *archivo_predicciones = fopen("sistema_archivos\\predicciones.txt", "a");
+    char ruta_predicciones[64];
+    snprintf(ruta_predicciones, sizeof(ruta_predicciones), "sistema_archivos%spredicciones.txt", PATH_SEPARATOR);
+    FILE *archivo_predicciones = fopen(ruta_predicciones, "a");
     
     if (!archivo_predicciones) {
         return; // No se pudo abrir el archivo
@@ -723,13 +736,22 @@ void guardarMes(struct Zona *zona, int numero_mes) {
     // Crear nombre de carpeta: mes_1, mes_2, etc.
     snprintf(nombre_carpeta, sizeof(nombre_carpeta), "mes_%d", numero_mes + 1);
     
-    // Crear carpeta si no existe (compatible con Windows)
-    snprintf(comando_mkdir, sizeof(comando_mkdir), "mkdir \"%s\" 2>nul", nombre_carpeta);
+    // Crear carpeta si no existe (multiplataforma)
+    #ifdef _WIN32
+        snprintf(comando_mkdir, sizeof(comando_mkdir), "mkdir \"%s\" 2>nul", nombre_carpeta);
+    #else
+        snprintf(comando_mkdir, sizeof(comando_mkdir), "mkdir -p \"%s\" 2>/dev/null", nombre_carpeta);
+    #endif
     system(comando_mkdir);
     
-    // Crear ruta completa del archivo
-    snprintf(nombre_archivo, sizeof(nombre_archivo), "%s\\%s_mes%d.dat", 
-             nombre_carpeta, zona->nombre, numero_mes + 1);
+    // Crear ruta completa del archivo (usar separador correcto)
+    #ifdef _WIN32
+        snprintf(nombre_archivo, sizeof(nombre_archivo), "%s\\%s_mes%d.dat", 
+                 nombre_carpeta, zona->nombre, numero_mes + 1);
+    #else
+        snprintf(nombre_archivo, sizeof(nombre_archivo), "%s/%s_mes%d.dat", 
+                 nombre_carpeta, zona->nombre, numero_mes + 1);
+    #endif
     
     FILE *archivo = fopen(nombre_archivo, "wb");
     if (archivo) {
@@ -776,9 +798,14 @@ void cargarMes(struct Zona *zona, int numero_mes) {
     // Crear nombre de carpeta: mes_1, mes_2, etc.
     snprintf(nombre_carpeta, sizeof(nombre_carpeta), "mes_%d", numero_mes + 1);
     
-    // Crear ruta completa del archivo
-    snprintf(nombre_archivo, sizeof(nombre_archivo), "%s\\%s_mes%d.dat", 
-             nombre_carpeta, zona->nombre, numero_mes + 1);
+    // Crear ruta completa del archivo (usar separador correcto)
+    #ifdef _WIN32
+        snprintf(nombre_archivo, sizeof(nombre_archivo), "%s\\%s_mes%d.dat", 
+                 nombre_carpeta, zona->nombre, numero_mes + 1);
+    #else
+        snprintf(nombre_archivo, sizeof(nombre_archivo), "%s/%s_mes%d.dat", 
+                 nombre_carpeta, zona->nombre, numero_mes + 1);
+    #endif
     
     FILE *archivo = fopen(nombre_archivo, "rb");
     if (archivo) {
@@ -800,7 +827,9 @@ void cargarMes(struct Zona *zona, int numero_mes) {
  */
 void guardarSemanaActual(int semanaActual[], int numZonas) {
     crearCarpetaSistema();
-    FILE *archivo = fopen("sistema_archivos\\semanas_actuales.dat", "wb");
+    char ruta_semanas[64];
+    snprintf(ruta_semanas, sizeof(ruta_semanas), "sistema_archivos%ssemanas_actuales.dat", PATH_SEPARATOR);
+    FILE *archivo = fopen(ruta_semanas, "wb");
     if (archivo) {
         fwrite(&numZonas, sizeof(int), 1, archivo);
         fwrite(semanaActual, sizeof(int), numZonas, archivo);
@@ -812,7 +841,9 @@ void guardarSemanaActual(int semanaActual[], int numZonas) {
  * Carga el estado actual de las semanas desde un archivo
  */
 void cargarSemanaActual(int semanaActual[], int numZonas) {
-    FILE *archivo = fopen("sistema_archivos\\semanas_actuales.dat", "rb");
+    char ruta_semanas[64];
+    snprintf(ruta_semanas, sizeof(ruta_semanas), "sistema_archivos%ssemanas_actuales.dat", PATH_SEPARATOR);
+    FILE *archivo = fopen(ruta_semanas, "rb");
     if (archivo) {
         int numZonasCargadas;
         fread(&numZonasCargadas, sizeof(int), 1, archivo);
@@ -1620,11 +1651,16 @@ char* obtenerNivelPeligrosidad(float valor, int tipo_contaminante) {
 
 /**
  * Crea la carpeta para archivos del sistema si no existe
+ * Multiplataforma: funciona en Windows, Linux y macOS
  */
 void crearCarpetaSistema() {
-    char comando_mkdir[64];
-    snprintf(comando_mkdir, sizeof(comando_mkdir), "mkdir \"sistema_archivos\" 2>nul");
-    system(comando_mkdir);
+    #ifdef _WIN32
+        // Windows
+        system("mkdir \"sistema_archivos\" 2>nul");
+    #else
+        // Linux/macOS
+        system("mkdir -p \"sistema_archivos\" 2>/dev/null");
+    #endif
 }
 
 // Función para ajustar el mes actual según la fecha del sistema

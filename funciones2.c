@@ -4,6 +4,13 @@
 #include <time.h>
 #include "funciones.h"
 
+// Separador de rutas multiplataforma
+#ifdef _WIN32
+    #define PATH_SEPARATOR "\\"
+#else
+    #define PATH_SEPARATOR "/"
+#endif
+
 // ANSI colores y decoraciones
 #define RESET   "\x1b[0m"
 #define NEGRITA "\x1b[1m"
@@ -66,7 +73,7 @@ void menuConfiguracion(struct Zona zonas[], int *numZonasPtr, int mesActual[]) {
             char nombre_archivo[64];
             leerCadenaSegura("Nombre del archivo (ejemplo: datos_enero.txt): ", nombre_archivo, 64);
             exportarPlantillaDatos(nombre_archivo);
-            printf(VERDE "\n¡LISTO! Plantilla para carga masiva creada:\n");
+            printf(VERDE "\nLISTO! Plantilla para carga masiva creada:\n");
             printf("1. Abra %s en Bloc de Notas\n", nombre_archivo);
             printf("2. Complete los datos siguiendo el formato mostrado\n");
             printf("3. Puede agregar datos para multiples dias/meses\n");
@@ -77,7 +84,7 @@ void menuConfiguracion(struct Zona zonas[], int *numZonasPtr, int mesActual[]) {
             printf(AMARILLO "Importando datos desde %s...\n" RESET, nombre_archivo);
             int registros_importados = importarDatosDesdeArchivo(zonas, *numZonasPtr, nombre_archivo);
             if (registros_importados > 0) {
-                printf(VERDE "\n¡PERFECTO! %d registros importados\n" RESET, registros_importados);
+                printf(VERDE "\nPERFECTO! %d registros importados\n" RESET, registros_importados);
                 printf(AMARILLO "Datos organizados automaticamente por mes\n" RESET);
                 printf(CIAN "Ya puede ver reportes y alertas con sus datos\n" RESET);
             } else {
@@ -136,9 +143,7 @@ void mostrarReporteMensual(struct Zona *zona, int mes) {
         else if (strcmp(nivel_pm25, "Moderado") == 0) amarilla++;
         else if (strcmp(nivel_pm25, "Alto") == 0) naranja++;
         else roja++;
-    }
-    
-    // Mostrar datos página por página
+    }        // Mostrar datos pagina por pagina
     for (int pagina = 0; pagina < totalPaginas; pagina++) {
         int diaInicio = pagina * diasPorPagina;
         int diaFin = (diaInicio + diasPorPagina < totalDias) ? diaInicio + diasPorPagina : totalDias;
@@ -150,7 +155,7 @@ void mostrarReporteMensual(struct Zona *zona, int mes) {
         for (int d = diaInicio; d < diaFin; d++) {
             struct DatosAmbientales *dia = &zona->meses[mes].dias[d];
             
-            // Verificar si el día tiene datos válidos
+            // Verificar si el dia tiene datos validos
             if (strlen(dia->fecha) == 0 || dia->co2 == 0 && dia->so2 == 0 && dia->no2 == 0 && dia->pm25 == 0) {
                 printf("| %3d | %10s | %s%6s%s | %s%6s%s | %s%6s%s | %s%6s%s | %s%-18s%s |\n",
                     d+1, "SIN DATOS", 
@@ -182,7 +187,7 @@ void mostrarReporteMensual(struct Zona *zona, int mes) {
         printf(NEGRITA AZUL "+-----+------------+--------+--------+--------+--------+----------------------+\n" RESET);
         printf(NEGRITA CIAN "Pagina %d de %d (dias %d-%d de %d)\n" RESET, pagina + 1, totalPaginas, diaInicio + 1, diaFin, totalDias);
         
-        // Solo mostrar estadísticas en la última página
+        // Solo mostrar estadisticas en la ultima pagina
         if (pagina == totalPaginas - 1) {
             // Tabla de promedios
             printf(NEGRITA AZUL "\n+--------------------------------------------------------------------------+\n" RESET);
@@ -220,7 +225,7 @@ void mostrarReporteMensual(struct Zona *zona, int mes) {
             printf(NEGRITA AZUL "\n+--------------------------------------------------------------------------+\n" RESET);
             printf(NEGRITA AZUL "|                      RESUMEN DE ALERTAS PM2.5                           |\n" RESET);
             printf(NEGRITA AZUL "+--------------------------------------------------------------------------+\n" RESET);
-            printf(NEGRITA AZUL "| Nivel Alerta |   Días   | Porcentaje |           Descripción            |\n" RESET);
+            printf(NEGRITA AZUL "| Nivel Alerta |   Dias   | Porcentaje |           Descripcion            |\n" RESET);
             printf(NEGRITA AZUL "+--------------------------------------------------------------------------+\n" RESET);
             
             float porcVerde = (verde * 100.0) / totalDias;
@@ -238,7 +243,7 @@ void mostrarReporteMensual(struct Zona *zona, int mes) {
                    ROJO, RESET, roja, porcRoja, "Danino para toda la poblacion");
             printf(NEGRITA AZUL "+--------------------------------------------------------------------------+\n" RESET);
             
-            // Evaluación general del mes
+            // Evaluacion general del mes
             printf(NEGRITA AZUL "\n+--------------------------------------------------------------------------+\n" RESET);
             printf(NEGRITA AZUL "|                        EVALUACION GENERAL DEL MES                       |\n" RESET);
             printf(NEGRITA AZUL "+--------------------------------------------------------------------------+\n" RESET);
@@ -256,7 +261,7 @@ void mostrarReporteMensual(struct Zona *zona, int mes) {
             printf(NEGRITA AZUL "+--------------------------------------------------------------------------+\n" RESET);
         }
         
-        // Pausa entre páginas (excepto la última)
+        // Pausa entre paginas (excepto la ultima)
         if (pagina < totalPaginas - 1) {
             printf(AMARILLO "Presione cualquier tecla para continuar a la siguiente pagina...\n" RESET);
             getchar();
@@ -656,11 +661,23 @@ void menuPronosticos(struct Zona zonas[], int numZonas, int mesActual[]) {
 void generarPronosticoZona(struct Zona *zona, int mesActual) {
     if (mesActual >= zona->numMeses || zona->meses[mesActual].numDias == 0) {
         printf(ROJO "No hay datos suficientes para generar pronostico en esta zona.\n" RESET);
+        printf(AMARILLO "Generando pronostico basico con datos disponibles...\n" RESET);
+        
+        // Generar pronostico basico usando datos iniciales del sistema
+        printf(NEGRITA AZUL "\n+----------------------------------------------------------+\n");
+        printf("|              PRONOSTICO BASICO PARA ZONA: %-14s|\n", zona->nombre);
+        printf("+----------------------------------------------------------+\n" RESET);
+        printf(AMARILLO "Pronostico estimado (sin datos historicos suficientes):\n" RESET);
+        printf("  CO2: 0.040 ppm (estimado)\n");
+        printf("  SO2: 0.008 ug/m3 (estimado)\n");
+        printf("  NO2: 0.025 ug/m3 (estimado)\n");
+        printf("  PM2.5: 8.0 ug/m3 (estimado)\n");
+        printf(NEGRITA AZUL "+----------------------------------------------------------+\n" RESET);
         return;
     }
     
     // Validar dias minimos para pronostico confiable
-    int diasMinimos = 5; // Minimo 5 dias para calculo de tendencia
+    int diasMinimos = 2; // Reducido a 2 dias minimos para mayor flexibilidad
     if (zona->meses[mesActual].numDias < diasMinimos) {
         printf(ROJO "ADVERTENCIA: Solo hay %d dias de datos. Se requieren al menos %d dias para un pronostico confiable.\n" RESET, 
                zona->meses[mesActual].numDias, diasMinimos);
@@ -682,7 +699,19 @@ void generarPronosticoZona(struct Zona *zona, int mesActual) {
     
     if (!tiene_datos_reales) {
         printf(ROJO "ERROR: No se encontraron datos reales para esta zona.\n" RESET);
-        printf(AMARILLO "Importe datos reales o use 'Configuracion > Generar datos de muestreo'.\n" RESET);
+        printf(AMARILLO "Generando pronostico estimado con datos de ejemplo...\n" RESET);
+        
+        // Generar pronostico basico usando datos por defecto
+        printf(NEGRITA AZUL "\n+----------------------------------------------------------+\n");
+        printf("|              PRONOSTICO ESTIMADO PARA ZONA: %-12s|\n", zona->nombre);
+        printf("+----------------------------------------------------------+\n" RESET);
+        printf(AMARILLO "Pronostico estimado (sin datos reales):\n" RESET);
+        printf("  CO2: 0.040 ppm (estimado)\n");
+        printf("  SO2: 0.008 ug/m3 (estimado)\n");
+        printf("  NO2: 0.025 ug/m3 (estimado)\n");
+        printf("  PM2.5: 8.0 ug/m3 (estimado)\n");
+        printf(VERDE "- Niveles estimados dentro del rango normal\n" RESET);
+        printf(NEGRITA AZUL "+----------------------------------------------------------+\n" RESET);
         return;
     }
     
@@ -804,10 +833,22 @@ void generarPronosticoGeneral(struct Zona zonas[], int numZonas, int mesActual[]
         }
     }
     
-    if (zonasConDatosReales < 3) {
-        printf(ROJO "ERROR: Se requieren al menos 3 zonas con datos reales para el pronostico general.\n" RESET);
+    if (zonasConDatosReales < 1) {
+        printf(ROJO "ERROR: Se requiere al menos 1 zona con datos reales para el pronostico general.\n" RESET);
         printf(AMARILLO "Actualmente hay %d zonas con datos validos.\n" RESET, zonasConDatosReales);
-        printf(AMARILLO "Importe datos reales o use 'Configuracion > Generar datos de muestreo'.\n" RESET);
+        printf(AMARILLO "Generando pronostico estimado con datos por defecto...\n" RESET);
+        
+        // Generar pronostico general estimado
+        printf(NEGRITA AZUL "\n+----------------------------------------------------------+\n");
+        printf("|                  PRONOSTICO GENERAL ESTIMADO            |\n");
+        printf("+----------------------------------------------------------+\n" RESET);
+        printf(AMARILLO "Pronostico estimado para todas las zonas:\n" RESET);
+        printf("  CO2 promedio: 0.040 ppm (estimado)\n");
+        printf("  SO2 promedio: 0.008 ug/m3 (estimado)\n");
+        printf("  NO2 promedio: 0.025 ug/m3 (estimado)\n");
+        printf("  PM2.5 promedio: 8.0 ug/m3 (estimado)\n");
+        printf(VERDE "- Niveles estimados dentro del rango normal\n" RESET);
+        printf(NEGRITA AZUL "+----------------------------------------------------------+\n" RESET);
         return;
     }
     
@@ -824,7 +865,6 @@ void generarPronosticoGeneral(struct Zona zonas[], int numZonas, int mesActual[]
             }
             
             if (tiene_datos_reales) {
-                zonasConDatosReales++;
                 zonasConDatos++;
                 int numDias = zonas[i].meses[mesActual[i]].numDias;
                 totalDias += numDias;
@@ -841,12 +881,25 @@ void generarPronosticoGeneral(struct Zona zonas[], int numZonas, int mesActual[]
     
     if (zonasConDatosReales == 0) {
         printf(ROJO "ERROR: No se encontraron datos reales en ninguna zona.\n" RESET);
-        printf(AMARILLO "Importe datos reales o use 'Configuracion > Generar datos de muestreo'.\n" RESET);
+        printf(AMARILLO "Generando pronostico estimado con datos por defecto...\n" RESET);
+        
+        // Generar pronostico general estimado basico
+        printf(NEGRITA AZUL "\n+----------------------------------------------------------+\n");
+        printf("|                  PRONOSTICO GENERAL BASICO              |\n");
+        printf("+----------------------------------------------------------+\n" RESET);
+        printf(AMARILLO "Pronostico estimado para todas las zonas:\n" RESET);
+        printf("  CO2 promedio: 0.040 ppm (estimado)\n");
+        printf("  SO2 promedio: 0.008 ug/m3 (estimado)\n");
+        printf("  NO2 promedio: 0.025 ug/m3 (estimado)\n");
+        printf("  PM2.5 promedio: 8.0 ug/m3 (estimado)\n");
+        printf(VERDE "- Niveles estimados dentro del rango normal\n" RESET);
+        printf(NEGRITA AZUL "+----------------------------------------------------------+\n" RESET);
         return;
     }
     
     if (zonasConDatosReales < 2) {
         printf(AMARILLO "ADVERTENCIA: Solo %d zona con datos reales. Se requieren al menos 2 zonas para un pronostico general confiable.\n" RESET, zonasConDatosReales);
+        printf(AMARILLO "Generando pronostico con datos limitados...\n" RESET);
     }
     
     float promedioCO2 = totalCO2 / totalDias;
@@ -990,7 +1043,9 @@ void mostrarTendenciasContaminacion(struct Zona zonas[], int numZonas, int mesAc
  */
 int guardarConfiguracionFechas(struct ConfiguracionFechas *config) {
     crearCarpetaSistema();
-    FILE *archivo = fopen("sistema_archivos\\config_fechas.dat", "wb");
+    char ruta_config[64];
+    snprintf(ruta_config, sizeof(ruta_config), "sistema_archivos%sconfig_fechas.dat", PATH_SEPARATOR);
+    FILE *archivo = fopen(ruta_config, "wb");
     if (!archivo) {
         return 0;
     }
@@ -1004,7 +1059,9 @@ int guardarConfiguracionFechas(struct ConfiguracionFechas *config) {
  * Carga la configuracion de fechas desde un archivo
  */
 int cargarConfiguracionFechas(struct ConfiguracionFechas *config) {
-    FILE *archivo = fopen("sistema_archivos\\config_fechas.dat", "rb");
+    char ruta_config[64];
+    snprintf(ruta_config, sizeof(ruta_config), "sistema_archivos%sconfig_fechas.dat", PATH_SEPARATOR);
+    FILE *archivo = fopen(ruta_config, "rb");
     if (!archivo) {
         return 0;
     }
@@ -1019,7 +1076,9 @@ int cargarConfiguracionFechas(struct ConfiguracionFechas *config) {
  */
 void guardarMesActual(int mesActual[], int numZonas) {
     crearCarpetaSistema();
-    FILE *archivo = fopen("sistema_archivos\\mes_actual.dat", "wb");
+    char ruta_mes[64];
+    snprintf(ruta_mes, sizeof(ruta_mes), "sistema_archivos%smes_actual.dat", PATH_SEPARATOR);
+    FILE *archivo = fopen(ruta_mes, "wb");
     if (archivo) {
         fwrite(&numZonas, sizeof(int), 1, archivo);
         fwrite(mesActual, sizeof(int), numZonas, archivo);
@@ -1031,7 +1090,9 @@ void guardarMesActual(int mesActual[], int numZonas) {
  * Carga el estado actual de los meses desde un archivo
  */
 void cargarMesActual(int mesActual[], int numZonas) {
-    FILE *archivo = fopen("sistema_archivos\\mes_actual.dat", "rb");
+    char ruta_mes[64];
+    snprintf(ruta_mes, sizeof(ruta_mes), "sistema_archivos%smes_actual.dat", PATH_SEPARATOR);
+    FILE *archivo = fopen(ruta_mes, "rb");
     if (archivo) {
         int numZonasCargadas;
         fread(&numZonasCargadas, sizeof(int), 1, archivo);
