@@ -98,7 +98,12 @@ void menuConfiguracion(struct Zona zonas[], int *numZonasPtr, int mesActual[]) {
                 // Ajustar mesActual[] para todas las zonas
                 for (int i = 0; i < *numZonasPtr; i++) {
                     // Buscar el mes correspondiente en la zona
-                    int mes_idx = (mes > 0) ? (mes - 1) : 0;
+                    int mes_idx;
+                    if (mes > 0) {
+                        mes_idx = mes - 1;
+                    } else {
+                        mes_idx = 0;
+                    }
                     if (mes_idx < zonas[i].numMeses) {
                         mesActual[i] = mes_idx;
                     } else if (zonas[i].numMeses > 0) {
@@ -197,7 +202,7 @@ void mostrarReporteMensual(struct Zona *zona, int mes) {
             struct DatosAmbientales *dia = &zona->meses[mes].dias[d];
             
             // Verificar si el dia tiene datos validos
-            if (strlen(dia->fecha) == 0 || dia->co2 == 0 && dia->so2 == 0 && dia->no2 == 0 && dia->pm25 == 0) {
+            if (strlen(dia->fecha) == 0 || (dia->co2 == 0 && dia->so2 == 0 && dia->no2 == 0 && dia->pm25 == 0)) {
                 printf("| %3d | %10s | %s%6s%s | %s%6s%s | %s%6s%s | %s%6s%s | %s%-26s%s |\n",
                     d+1, "SIN DATOS", 
                     AMARILLO, "N/A", RESET,
@@ -519,6 +524,34 @@ void menuIngresoManual(struct Zona zonas[], int numZonas, int mesActual[]) {
     }
 }
 
+void cargarSemanaTemporal(struct Zona *zona, int semana) {
+    char nombre_archivo[64];
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "temp_%s_semana%d.dat", zona->nombre, semana + 1);
+    
+    FILE *archivo = fopen(nombre_archivo, "rb");
+    if (archivo) {
+        fread(&zona->semanas[semana], sizeof(struct Semana), 1, archivo);
+        fclose(archivo);
+    }
+}
+
+void guardarSemanaTemporal(struct Zona *zona, int semana) {
+    char nombre_archivo[64];
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "temp_%s_semana%d.dat", zona->nombre, semana + 1);
+    
+    FILE *archivo = fopen(nombre_archivo, "wb");
+    if (archivo) {
+        fwrite(&zona->semanas[semana], sizeof(struct Semana), 1, archivo);
+        fclose(archivo);
+    }
+}
+
+void limpiarDatosTemporales(struct Zona *zona, int semana) {
+    char nombre_archivo[64];
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "temp_%s_semana%d.dat", zona->nombre, semana + 1);
+    remove(nombre_archivo);
+}
+
 // --- Menu de checkpoints ---
 void menuCheckpoints(struct Zona zonas[], int numZonas, int mesActual[]) {
     (void)mesActual; // Suprimir warning de parametro no usado
@@ -530,19 +563,56 @@ void menuCheckpoints(struct Zona zonas[], int numZonas, int mesActual[]) {
         printf("| 2. Cargar mes anterior               |\n");
         printf("| 3. Mostrar meses disponibles         |\n");
         printf("| 4. Limpiar datos temporales          |\n");
-        printf("| 5. Volver                            |\n");
+        printf("| 5. Diagnosticar sistema archivos     |\n");
+        printf("| 6. Volver                            |\n");
         printf("+--------------------------------------+\n" RESET);
         
-        int op = leerEnteroSeguro("Seleccione opcion: ", 1, 5);
+        int op = leerEnteroSeguro("Seleccione opcion: ", 1, 6);
         
         if (op == 1) {
             // Guardar permanentemente el mes actual
+            printf(AMARILLO "Guardando mes actual para todas las zonas...\n" RESET);
+            
+            // Inicializar meses actuales si están vacíos
+            inicializarMesActualSiVacio(zonas, numZonas, mesActual);
+            
+            int exito_total = 1;
             for (int i = 0; i < numZonas; i++) {
-                guardarMes(&zonas[i], mesActual[i]);
+                printf("Guardando zona %s (mes %d)...\n", zonas[i].nombre, mesActual[i] + 1);
+                
+                // Verificar si hay datos para guardar
+                if (zonas[i].meses[mesActual[i]].numDias == 0) {
+                    printf(AMARILLO "  Advertencia: La zona %s no tiene datos en el mes %d\n" RESET, 
+                           zonas[i].nombre, mesActual[i] + 1);
+                } else {
+                    printf("  Zona %s tiene %d dias de datos\n", zonas[i].nombre, zonas[i].meses[mesActual[i]].numDias);
+                }
+                
+                FILE *test_file = NULL;
+                char test_filename[128];
+                snprintf(test_filename, sizeof(test_filename), "test_write_%d.tmp", i);
+                
+                // Verificar permisos de escritura antes de intentar guardar
+                test_file = fopen(test_filename, "w");
+                if (test_file) {
+                    fclose(test_file);
+                    remove(test_filename);
+                    
+                    // Proceder con el guardado
+                    guardarMes(&zonas[i], mesActual[i]);
+                } else {
+                    printf(ROJO "  Error: No se puede escribir en el directorio actual\n" RESET);
+                    exito_total = 0;
+                }
             }
-            // Guardar estado de meses actuales
-            guardarMesActual(mesActual, numZonas);
-            printf(VERDE "Checkpoint guardado permanentemente para todas las zonas (mes actual).\n" RESET);
+            
+            if (exito_total) {
+                // Guardar estado de meses actuales
+                guardarMesActual(mesActual, numZonas);
+                printf(VERDE "Checkpoint guardado exitosamente para todas las zonas.\n" RESET);
+            } else {
+                printf(ROJO "Algunos archivos no pudieron guardarse. Verifique permisos.\n" RESET);
+            }
             
         } else if (op == 2) {
             // Cargar mes anterior
@@ -610,6 +680,10 @@ void menuCheckpoints(struct Zona zonas[], int numZonas, int mesActual[]) {
             printf(VERDE "Limpieza completada.\n" RESET);
             
         } else if (op == 5) {
+            // Diagnosticar sistema de archivos
+            diagnosticarSistemaArchivos();
+            
+        } else if (op == 6) {
             break;
         }
         
@@ -657,6 +731,152 @@ void menuPronosticos(struct Zona zonas[], int numZonas, int mesActual[]) {
             break;
         }
     }
+}
+
+// Funcion para generar pronostico de una zona especifica
+void generarPronosticoZona(struct Zona *zona, int mesActual) {
+    if (mesActual >= zona->numMeses || zona->meses[mesActual].numDias == 0) {
+        printf(ROJO "No hay datos suficientes para generar pronostico en esta zona.\n" RESET);
+        printf(AMARILLO "Generando pronostico basico con datos disponibles...\n" RESET);
+        
+        // Generar pronostico basico usando datos iniciales del sistema
+        printf(NEGRITA AZUL "\n+----------------------------------------------------------+\n");
+        printf("|              PRONOSTICO BASICO PARA ZONA: %-14s|\n", zona->nombre);
+        printf("+----------------------------------------------------------+\n" RESET);
+        printf(AMARILLO "Pronostico estimado (sin datos historicos suficientes):\n" RESET);
+        printf("  CO2: 0.040 ppm (estimado)\n");
+        printf("  SO2: 0.008 ug/m3 (estimado)\n");
+        printf("  NO2: 0.025 ug/m3 (estimado)\n");
+        printf("  PM2.5: 8.0 ug/m3 (estimado)\n");
+        printf(NEGRITA AZUL "+----------------------------------------------------------+\n" RESET);
+        return;
+    }
+    
+    // Validar dias minimos para pronostico confiable
+    int diasMinimos = 2; // Reducido a 2 dias minimos para mayor flexibilidad
+    if (zona->meses[mesActual].numDias < diasMinimos) {
+        printf(ROJO "ADVERTENCIA: Solo hay %d dias de datos. Se requieren al menos %d dias para un pronostico confiable.\n" RESET, 
+               zona->meses[mesActual].numDias, diasMinimos);
+        printf(AMARILLO "Mostrando pronostico con datos limitados...\n" RESET);
+    }
+    
+    printf(NEGRITA AZUL "\n+----------------------------------------------------------+\n");
+    printf("|              PRONOSTICO PARA ZONA: %-20s|\n", zona->nombre);
+    printf("+----------------------------------------------------------+\n" RESET);
+    
+    // Verificar que los datos son reales y no de ejemplo
+    int tiene_datos_reales = 0;
+    for (int d = 0; d < zona->meses[mesActual].numDias; d++) {
+        if (strlen(zona->meses[mesActual].dias[d].fecha) > 0) {
+            tiene_datos_reales = 1;
+            break;
+        }
+    }
+    
+    if (!tiene_datos_reales) {
+        printf(ROJO "ERROR: No se encontraron datos reales para esta zona.\n" RESET);
+        printf(AMARILLO "Generando pronostico estimado con datos de ejemplo...\n" RESET);
+        
+        // Generar pronostico basico usando datos por defecto
+        printf(NEGRITA AZUL "\n+----------------------------------------------------------+\n");
+        printf("|              PRONOSTICO ESTIMADO PARA ZONA: %-12s|\n", zona->nombre);
+        printf("+----------------------------------------------------------+\n" RESET);
+        printf(AMARILLO "Pronostico estimado (sin datos reales):\n" RESET);
+        printf("  CO2: 0.040 ppm (estimado)\n");
+        printf("  SO2: 0.008 ug/m3 (estimado)\n");
+        printf("  NO2: 0.025 ug/m3 (estimado)\n");
+        printf("  PM2.5: 8.0 ug/m3 (estimado)\n");
+        printf(VERDE "- Niveles estimados dentro del rango normal\n" RESET);
+        printf(NEGRITA AZUL "+----------------------------------------------------------+\n" RESET);
+        return;
+    }
+    
+    // Calcular promedios del mes actual
+    float sumCO2 = 0, sumSO2 = 0, sumNO2 = 0, sumPM25 = 0;
+    int numDias = zona->meses[mesActual].numDias;
+    
+    for (int d = 0; d < numDias; d++) {
+        sumCO2 += zona->meses[mesActual].dias[d].co2;
+        sumSO2 += zona->meses[mesActual].dias[d].so2;
+        sumNO2 += zona->meses[mesActual].dias[d].no2;
+        sumPM25 += zona->meses[mesActual].dias[d].pm25;
+    }
+    
+    float promCO2 = sumCO2 / numDias;
+    float promSO2 = sumSO2 / numDias;
+    float promNO2 = sumNO2 / numDias;
+    float promPM25 = sumPM25 / numDias;
+    
+    // Calcular tendencia (variacion entre primeros y ultimos dias)
+    float tendenciaCO2 = 0, tendenciaSO2 = 0, tendenciaNO2 = 0, tendenciaPM25 = 0;
+    
+    if (numDias >= diasMinimos) {
+        float inicialCO2 = 0, inicialSO2 = 0, inicialNO2 = 0, inicialPM25 = 0;
+        float finalCO2 = 0, finalSO2 = 0, finalNO2 = 0, finalPM25 = 0;
+        
+        int diasParaTendencia;
+        if (numDias >= 7) {
+            diasParaTendencia = 3;
+        } else {
+            diasParaTendencia = 1;
+        }
+        
+        // Promedio de primeros dias
+        for (int d = 0; d < diasParaTendencia; d++) {
+            inicialCO2 += zona->meses[mesActual].dias[d].co2;
+            inicialSO2 += zona->meses[mesActual].dias[d].so2;
+            inicialNO2 += zona->meses[mesActual].dias[d].no2;
+            inicialPM25 += zona->meses[mesActual].dias[d].pm25;
+        }
+        
+        // Promedio de ultimos dias
+        for (int d = numDias - diasParaTendencia; d < numDias; d++) {
+            finalCO2 += zona->meses[mesActual].dias[d].co2;
+            finalSO2 += zona->meses[mesActual].dias[d].so2;
+            finalNO2 += zona->meses[mesActual].dias[d].no2;            finalPM25 += zona->meses[mesActual].dias[d].pm25;
+        }
+        
+        tendenciaCO2 = (finalCO2 / diasParaTendencia) - (inicialCO2 / diasParaTendencia);
+        tendenciaSO2 = (finalSO2 / diasParaTendencia) - (inicialSO2 / diasParaTendencia);
+        tendenciaNO2 = (finalNO2 / diasParaTendencia) - (inicialNO2 / diasParaTendencia);
+        tendenciaPM25 = (finalPM25 / diasParaTendencia) - (inicialPM25 / diasParaTendencia);
+    }
+    
+    // Pronostico para proximos dias (con tendencia)
+    float pronosticoCO2 = promCO2 + tendenciaCO2;
+    float pronosticoSO2 = promSO2 + tendenciaSO2;
+    float pronosticoNO2 = promNO2 + tendenciaNO2;
+    float pronosticoPM25 = promPM25 + tendenciaPM25;
+    
+    printf("Promedios actuales (basados en %d dias de datos reales):\n", numDias);
+    printf("  CO2: %.2f ppm, SO2: %.2f ug/m3, NO2: %.2f ug/m3, PM2.5: %.2f ug/m3\n",
+           promCO2, promSO2, promNO2, promPM25);
+    
+    printf(AMARILLO "\nPronostico para proximos dias:\n" RESET);
+    printf("  CO2: %.2f ppm\n", pronosticoCO2);
+    printf("  SO2: %.2f ug/m3\n", pronosticoSO2);
+    printf("  NO2: %.2f ug/m3\n", pronosticoNO2);
+    printf("  PM2.5: %.2f ug/m3\n", pronosticoPM25);
+    
+    // Evaluacion del pronostico
+    printf(NEGRITA "\nEvaluacion del pronostico:\n" RESET);
+    if (pronosticoPM25 > 75) {
+        printf(ROJO "- Alerta alta: PM2.5 puede alcanzar niveles peligrosos\n" RESET);
+    } else if (pronosticoPM25 > 35) {
+        printf(AMARILLO "- Precaucion: PM2.5 puede estar en niveles moderados\n" RESET);
+    } else {
+        printf(VERDE "- Calidad del aire aceptable para PM2.5\n" RESET);
+    }
+    
+    if (pronosticoCO2 > 800) {
+        printf(ROJO "- Alerta: CO2 puede alcanzar niveles altos\n" RESET);
+    } else if (pronosticoCO2 > 600) {
+        printf(AMARILLO "- Precaucion: CO2 en niveles moderados\n" RESET);
+    } else {
+        printf(VERDE "- Niveles de CO2 aceptables\n" RESET);
+    }
+    
+    printf(NEGRITA AZUL "+----------------------------------------------------------+\n" RESET);
 }
 
 // Funcion mejorada para generar pronostico usando datos multimes
@@ -1329,7 +1549,7 @@ void crearMesesVaciosHasta(struct Zona zonas[], int numZonas, int mesObjetivo) {
 
 void verificarYCrearMesesNecesarios(struct Zona zonas[], int numZonas, int mesDestino) {
     // Verificar si necesitamos crear meses intermedios
-    int necesitaCrear = 0;
+    // int necesitaCrear = 0; // Variable no usada actualmente
     int mesMaximoGlobal = 0;
     
     // Encontrar el mes maximo con datos en todas las zonas
@@ -1346,7 +1566,7 @@ void verificarYCrearMesesNecesarios(struct Zona zonas[], int numZonas, int mesDe
         printf(AMARILLO "Detectado salto de meses: del mes %d al mes %d\n" RESET, 
                mesMaximoGlobal + 1, mesDestino + 1);
         
-        char respuesta = leerCaracterSeguro("Crear meses intermedios vacios? (s/n): ");
+        char respuesta = leerCaracterSeguro("Crear meses intermedios vacios (s/n): ");
         if (respuesta == 's' || respuesta == 'S') {
             crearMesesVaciosHasta(zonas, numZonas, mesDestino - 1);
         }
@@ -1355,6 +1575,7 @@ void verificarYCrearMesesNecesarios(struct Zona zonas[], int numZonas, int mesDe
 
 // --- Funciones de prediccion (sin implementar) ---
 void predecirAlertasPM25(struct Zona zonas[], int numZonas, int mesActual[]) {
+    (void)mesActual; // Suprimir warning de parámetro no usado
     printf("\n+----------------------------------------------------------+\n");
     printf("|   Prediccion de alertas PM2.5                           |\n");
     printf("+----------------------------------------------------------+\n");
@@ -1391,6 +1612,7 @@ void predecirAlertasPM25(struct Zona zonas[], int numZonas, int mesActual[]) {
 }
 
 void mostrarTendenciasContaminacion(struct Zona zonas[], int numZonas, int mesActual[]) {
+    (void)mesActual; // Suprimir warning de parámetro no usado
     printf("\n+----------------------------------------------------------+\n");
     printf("|   Analisis de tendencias de contaminacion               |\n");
     printf("+----------------------------------------------------------+\n");
@@ -1470,16 +1692,16 @@ void mostrarAlertasYRecomendaciones(struct Zona zonas[], int numZonas) {
         const char *alerta = "Bueno";
         const char *recomendacion = "Sin restricciones. Aire limpio.";
         if (prom_pm25 > 75) {
-            color = ROJO;
             alerta = "Peligroso";
+            color = ROJO;
             recomendacion = "Evite salir. Riesgo alto para salud.";
         } else if (prom_pm25 > 35) {
-            color = AMARILLO;
             alerta = "Moderado";
+            color = AMARILLO;
             recomendacion = "Limite ejercicio y actividades al aire libre.";
         } else if (prom_pm25 > 12) {
-            color = MAGENTA;
             alerta = "Alto";
+            color = MAGENTA;
             recomendacion = "Personas sensibles deben evitar exposicion prolongada.";
         }
         printf("| %-2d | %-18s | %s%-19s%s | %-27s |\n", i + 1, zonas[i].nombre, color, alerta, RESET, recomendacion);
@@ -1530,7 +1752,12 @@ void exportarReporteTabla(struct Zona zonas[], int numZonas) {
             total_dias++;
         }
     }
-    float promedio_general_pm25 = (total_dias > 0) ? suma_general_pm25 / total_dias : 0;
+    float promedio_general_pm25;
+    if (total_dias > 0) {
+        promedio_general_pm25 = suma_general_pm25 / total_dias;
+    } else {
+        promedio_general_pm25 = 0;
+    }
     fprintf(archivo, "- Promedio general de PM2.5: %.2f\n\n", promedio_general_pm25);
 
     // Detalles por zona
@@ -1628,3 +1855,54 @@ void exportarAlertasYRecomendaciones(struct Zona zonas[], int numZonas) {
     fclose(archivo);
     printf(VERDE "Alertas y recomendaciones exportadas exitosamente a '%s'." RESET "\n", nombre_archivo);
 }
+
+// Funcion para diagnosticar problemas con el sistema de archivos
+void diagnosticarSistemaArchivos() {
+    printf("=== DIAGNOSTICO DEL SISTEMA DE ARCHIVOS ===\n");
+    
+    // Verificar directorio actual
+    printf("1. Verificando directorio actual...\n");
+    FILE *test_file = fopen("test_write.tmp", "w");
+    if (test_file) {
+        fprintf(test_file, "test");
+        fclose(test_file);
+        remove("test_write.tmp");
+        printf("   [OK] Permisos de escritura: OK\n");
+    } else {
+        printf("   [ERROR] Permisos de escritura: FALLO\n");
+        printf("   Solucion: Ejecutar como administrador o cambiar directorio\n");
+    }
+    
+    // Verificar carpeta sistema_archivos
+    printf("2. Verificando carpeta sistema_archivos...\n");
+    struct stat st;
+    if (stat("sistema_archivos", &st) == 0) {
+        printf("   [OK] Carpeta sistema_archivos: EXISTE\n");
+    } else {
+        printf("   [ERROR] Carpeta sistema_archivos: NO EXISTE\n");
+        printf("   Intentando crear...\n");
+        crearCarpetaSistema();
+        if (stat("sistema_archivos", &st) == 0) {
+            printf("   [OK] Carpeta sistema_archivos: CREADA\n");
+        } else {
+            printf("   [ERROR] Carpeta sistema_archivos: NO SE PUDO CREAR\n");
+        }
+    }
+    
+    // Verificar carpetas de meses
+    printf("3. Verificando carpetas de meses...\n");
+    for (int i = 1; i <= 12; i++) {
+        char carpeta_mes[32];
+        snprintf(carpeta_mes, sizeof(carpeta_mes), "mes_%d", i);
+        
+        if (stat(carpeta_mes, &st) == 0) {
+            printf("   [OK] Carpeta mes_%d: EXISTE\n", i);
+        } else {
+            printf("   [INFO] Carpeta mes_%d: NO EXISTE (se creara cuando sea necesario)\n", i);
+        }
+    }
+    
+    printf("=== FIN DEL DIAGNOSTICO ===\n");
+}
+
+// --- Menu de pronosticos ---

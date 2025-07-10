@@ -240,3 +240,9 @@ void generarNombreUnico(const char* carpeta, const char* nombre_base, const char
 // Funciones para manejo de meses vacios
 void crearMesesVaciosHasta(struct Zona zonas[], int numZonas, int mesMaximo);
 void verificarYCrearMesesNecesarios(struct Zona zonas[], int numZonas, int mesDestino);
+
+// Función para diagnosticar problemas con el sistema de archivos
+void diagnosticarSistemaArchivos();
+
+// Función para inicializar el mes actual con datos básicos si está vacío
+void inicializarMesActualSiVacio(struct Zona zonas[], int numZonas, int mesActual[]);

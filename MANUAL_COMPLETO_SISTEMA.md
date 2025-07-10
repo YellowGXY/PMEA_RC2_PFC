@@ -1,17 +1,39 @@
-# MANUAL COMPLETO - SISTEMA DE GESTIÓN Y PREDICCIÓN DE CALIDAD DEL AIRE
+# MANUAL UNIFICADO Y DETALLADO - SISTEMA DE GESTIÓN Y PREDICCIÓN DE CALIDAD DEL AIRE
 
 ## DESCRIPCIÓN GENERAL
 
-El Sistema de Gestión y Predicción de Calidad del Aire es una aplicación integral desarrollada en C que permite monitorear, analizar y predecir la calidad del aire en múltiples zonas geográficas. El sistema maneja datos de contaminantes atmosféricos (CO2, SO2, NO2, PM2.5) junto con condiciones ambientales (temperatura, viento, humedad).
+El Sistema de Gestión y Predicción de Calidad del Aire es una aplicación integral desarrollada en C que permite monitorear, analizar y predecir la calidad del aire en múltiples zonas geográficas de Ecuador. El sistema está específicamente diseñado para las principales ciudades ecuatorianas: **Quito, Cuenca, Guayaquil, Loja y Ambato**.
 
-### ✅ VERSIÓN ACTUALIZADA Y MEJORADA (2025)
-- **Soporte multiplataforma completo** para Windows, Linux y macOS
-- **Eliminación completa de caracteres especiales** para máxima compatibilidad
-- **Funciones de predicción flexibles** que funcionan con datos limitados
-- **Gestión inteligente de fechas y meses consecutivos**
-- **Validación robusta de entrada de datos**
-- **Tablas optimizadas para mejor visualización**
-- **Código simplificado y funciones básicas**
+### 📊 CAPACIDADES DEL SISTEMA
+- **Monitoreo en tiempo real** de contaminantes atmosféricos principales
+- **Análisis histórico** con almacenamiento persistente de datos mensuales
+- **Predicciones inteligentes** basadas en datos reales o estimaciones
+- **Sistema de alertas** conforme a estándares de la OMS
+- **Importación masiva** de datos desde archivos CSV/TXT
+- **Exportación de reportes** para análisis externos
+- **Gestión multiplataforma** (Windows, Linux, macOS)
+
+### 🌡️ CONTAMINANTES MONITOREADOS
+1. **CO2 (Dióxido de Carbono)**: 0.0-1.0 ppm - Indicador de calidad del aire urbano
+2. **SO2 (Dióxido de Azufre)**: 0.0-100.0 μg/m³ - Contaminante industrial principal
+3. **NO2 (Dióxido de Nitrógeno)**: 0.0-300.0 μg/m³ - Contaminante vehicular
+4. **PM2.5 (Material Particulado)**: 0.0-500.0 μg/m³ - Indicador crítico de salud pública
+
+### 🌤️ CONDICIONES AMBIENTALES
+- **Temperatura**: -50.0 a 60.0°C - Monitoreo climático completo
+- **Velocidad del viento**: 0.0-100.0 km/h - Factor de dispersión de contaminantes
+- **Humedad relativa**: 0-100% - Condiciones atmosféricas
+
+### ✅ VERSIÓN ACTUALIZADA Y MEJORADA (JULIO 2025)
+- **🌐 Soporte multiplataforma completo** para Windows, Linux y macOS
+- **🔤 Eliminación completa de caracteres especiales** para máxima compatibilidad
+- **🔮 Funciones de predicción flexibles** que funcionan con datos limitados
+- **📅 Gestión inteligente de fechas y meses consecutivos**
+- **🛡️ Validación robusta de entrada de datos** con eliminación total de scanf()
+- **📋 Tablas optimizadas** para mejor visualización sin desbordamientos
+- **⚡ Código simplificado** y funciones básicas optimizadas
+- **📥 Sistema de importación inteligente** con validación automática de datos
+- **🔄 Gestión automática de meses** con detección inteligente de secuencias
 
 ## CARACTERÍSTICAS PRINCIPALES
 
@@ -41,6 +63,62 @@ El Sistema de Gestión y Predicción de Calidad del Aire es una aplicación inte
 - **Eliminación total de `scanf()` directo** para mayor seguridad - ✅ **COMPLETADO**
 - **Portabilidad mejorada** sin patrones problemáticos de lectura
 - **Seguridad 100%**: Cero vulnerabilidades de entrada de datos
+
+### 🚀 NUEVO MENÚ PRINCIPAL ACTUAL
+El sistema actual presenta un **menú principal simplificado con 7 opciones**:
+
+```
++----------------------------------------------------------+
+|        SISTEMA INTEGRAL DE GESTION Y PREDICCION AIRE     |
++----------------------------------------------------------+
+| 1. Configuracion                                         |
+| 2. Ingreso manual de datos                               |
+| 3. Reportes                                              |
+| 4. Checkpoints (guardar/recuperar mes)                   |
+| 5. Siguiente mes                                         |
+| 6. Pronosticos de calidad del aire                       |
+| 7. Salir                                                 |
++----------------------------------------------------------+
+```
+
+### 📁 ESTRUCTURA DE ARCHIVOS DEL CÓDIGO ACTUAL
+- **`main.c`** (127 líneas): Programa principal con gestión de fechas inicial y menú principal
+- **`funciones.c`** (2107 líneas): Funciones básicas, validación robusta e importación de datos
+- **`funciones2.c`**: Funciones avanzadas y menús especializados
+- **`funciones.h`** (249 líneas): Declaraciones completas de estructuras y funciones
+- **`datos_reales_carga.txt`** (187 líneas): Plantilla con datos reales de Ecuador (Junio-Julio 2025)
+- **`DATOSC.csv`** (152 líneas): Datos originales de estaciones de monitoreo
+
+### 🔍 FUNCIONES PRINCIPALES IMPLEMENTADAS
+
+#### **Sistema de Validación de Entrada (funciones.c)**
+```c
+// Funciones 100% seguras implementadas
+int leerEnteroSeguro(const char *mensaje, int min, int max)
+float leerFloatSeguro(const char *mensaje, float min, float max)
+char leerCaracterSeguro(const char *mensaje)
+void leerCadenaSegura(const char *mensaje, char *destino, int tamano_max)
+
+// Validación automática de rangos
+int validarEnteroEnRango(const char *entrada, int min, int max)
+int validarFloatEnRango(const char *entrada, float min, float max)
+```
+
+#### **Sistema de Importación Masiva (funciones.c)**
+```c
+// Importación inteligente con validación automática
+int importarDatosDesdeArchivo(struct Zona zonas[], int numZonas, const char* nombreArchivo)
+void exportarPlantillaDatos(const char* nombreArchivo)
+void actualizarFechaSegunDatos(struct Zona zonas[], int numZonas)
+```
+
+#### **Gestión de Meses y Fechas (funciones.c)**
+```c
+// Configuración inteligente de fechas
+void cargarOSolicitarFechaInicial()
+void ajustarMesActualSegunFecha(int mesActual[], int numZonas)
+int determinarMesActualInteligente(struct Zona zonas[], int numZonas, int meses_detectados[])
+```
 
 ### ✅ MEJORAS IMPLEMENTADAS (2025)
 - **Soporte multiplataforma**: Separadores de ruta y comandos adaptativos
