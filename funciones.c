@@ -263,19 +263,17 @@ void generarRecomendaciones(char alertas[][64], int numero_alertas) {
  */
 void mostrarTablaZonas(struct Sistema *sistema) {
     // Encabezado de la tabla
-    printf("+--------+-------+-------+-------+-------+\n");
-    printf("| Zona   | CO2   | SO2   | NO2   | PM2.5 |\n");
-    printf("+--------+-------+-------+-------+-------+\n");
-    
+    printf("+----------------------------+--------+--------+--------+--------+\n");
+    printf("| Zona                       |  CO2   |  SO2   |  NO2   | PM2.5  |\n");
+    printf("+----------------------------+--------+--------+--------+--------+\n");
     // Datos de cada zona
     for (int indice_zona = 0; indice_zona < sistema->numZonas; indice_zona++) {
-        printf("| %-6s | %5.2f | %5.2f | %5.2f | %5.1f |\n",
+        printf("| %-26s | %6.2f | %6.2f | %6.2f | %6.1f |\n",
             sistema->zonas[indice_zona].nombre, sistema->zonas[indice_zona].co2, sistema->zonas[indice_zona].so2,
             sistema->zonas[indice_zona].no2, sistema->zonas[indice_zona].pm25);
     }
-    
     // Pie de la tabla
-    printf("+--------+-------+-------+-------+-------+\n");
+    printf("+----------------------------+--------+--------+--------+--------+\n");
 }
 
 // ===============================
@@ -1479,6 +1477,42 @@ int importarDatosDesdeArchivo(struct Zona zonas[], int numZonas, const char* nom
         }
         printf("\n" ANSI_RESET);
         
+        // CREAR MESES VACIOS AUTOMATICAMENTE
+        int mes_minimo = -1, mes_maximo = -1;
+        for (int i = 0; i < MAX_MESES; i++) {
+            if (meses_detectados[i]) {
+                if (mes_minimo == -1) mes_minimo = i;
+                mes_maximo = i;
+            }
+        }
+        
+        if (mes_minimo != -1 && mes_minimo > 0) {
+            printf(ANSI_AMARILLO "Detectados datos desde mes %d. Creando meses vacios del 1 al %d...\n" ANSI_RESET, 
+                   mes_minimo + 1, mes_minimo);
+            
+            for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
+                for (int mes = 0; mes < mes_minimo; mes++) {
+                    // Inicializar mes vacio si no existe
+                    if (zonas[zona_idx].meses[mes].numDias == 0) {
+                        zonas[zona_idx].meses[mes].numDias = 0;
+                        for (int d = 0; d < MAX_DIAS_MES; d++) {
+                            zonas[zona_idx].meses[mes].dias[d].co2 = 0;
+                            zonas[zona_idx].meses[mes].dias[d].so2 = 0;
+                            zonas[zona_idx].meses[mes].dias[d].no2 = 0;
+                            zonas[zona_idx].meses[mes].dias[d].pm25 = 0;
+                            strcpy(zonas[zona_idx].meses[mes].dias[d].fecha, "");
+                        }
+                        printf(ANSI_VERDE "  Mes %d vacio creado para zona %s\n" ANSI_RESET, 
+                               mes + 1, zonas[zona_idx].nombre);
+                    }
+                }
+                // Actualizar numMeses para incluir los meses vacios
+                if (zonas[zona_idx].numMeses < mes_maximo + 1) {
+                    zonas[zona_idx].numMeses = mes_maximo + 1;
+                }
+            }
+        }
+        
         // Validar automáticamente los datos importados
         int problemas = validarDatosImportados(zonas, numZonas, meses_detectados);
         
@@ -1516,6 +1550,7 @@ int importarDatosDesdeArchivo(struct Zona zonas[], int numZonas, const char* nom
         printf(ANSI_VERDE "Datos guardados automaticamente en carpetas por mes\n" ANSI_RESET);
         
         // Mensaje final basado en la calidad de los datos
+       
         if (problemas == 0) {
             printf(ANSI_VERDE "\nIMPORTACION COMPLETADA EXITOSAMENTE\n" ANSI_RESET);
         } else {
@@ -2060,7 +2095,7 @@ void manejarDiasFaltantes(struct Zona zonas[], int numZonas, int meses_detectado
         if (meses_detectados[mes]) {
             int max_dias = 0;
             for (int zona_idx = 0; zona_idx < numZonas; zona_idx++) {
-                if (zonas[zona_idx].meses[mes].numDias > max_dias) {
+                if (zonas[zona_idx].meses[mes].numDias < max_dias) {
                     max_dias = zonas[zona_idx].meses[mes].numDias;
                 }
             }

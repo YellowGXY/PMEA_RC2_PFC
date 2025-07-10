@@ -214,6 +214,7 @@ void actualizarFechaSegunDatos(struct Zona zonas[], int numZonas);
 // Funciones de pronósticos
 void menuPronosticos(struct Zona zonas[], int numZonas, int mesActual[]);
 void generarPronosticoZona(struct Zona *zona, int mesActual);
+void generarPronosticoZonaMejorado(struct Zona *zona, int mesActual);
 void generarPronosticoGeneral(struct Zona zonas[], int numZonas, int mesActual[]);
 void predecirAlertasPM25(struct Zona zonas[], int numZonas, int mesActual[]);
 void mostrarTendenciasContaminacion(struct Zona zonas[], int numZonas, int mesActual[]);
@@ -235,3 +236,7 @@ void manejarDiasFaltantes(struct Zona zonas[], int numZonas, int meses_detectado
 void crearCarpetasReportes();
 void solicitarNombreArchivo(const char* tipo_reporte, char* nombre_usuario);
 void generarNombreUnico(const char* carpeta, const char* nombre_base, const char* extension, char* nombre_final);
+
+// Funciones para manejo de meses vacios
+void crearMesesVaciosHasta(struct Zona zonas[], int numZonas, int mesMaximo);
+void verificarYCrearMesesNecesarios(struct Zona zonas[], int numZonas, int mesDestino);
