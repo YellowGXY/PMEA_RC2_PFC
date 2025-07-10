@@ -945,13 +945,15 @@ void calcularFechaAutomatica(struct ConfiguracionFechas *config, int dia_relativ
 
 /**
  * Versión mejorada del ingreso manual de datos con mejor validación y fechas automáticas
+ * Ahora los datos se guardan al final de la semana para evitar pérdida si el usuario sale antes.
+ * Si se cancela en un día, ese día NO se guarda (no se incrementa numDias).
  */
 void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct ConfiguracionFechas *config) {
     if (semana >= MAX_SEMANAS) {
         printf("Semana invalida. Debe estar entre 0 y %d.\n", MAX_SEMANAS-1);
         return;
     }
-    
+
     printf("\n+---------------------------------------------------------------+\n");
     printf("| INGRESO MANUAL DE DATOS - ZONA: %-28s |\n", zona->nombre);
     printf("| SEMANA: %-3d                                                  |\n", semana+1);
@@ -961,12 +963,13 @@ void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct Configura
     printf("| - Valores fuera de rango seran rechazados                    |\n");
     printf("| - Escriba 'c' para cancelar en cualquier momento             |\n");
     printf("+---------------------------------------------------------------+\n\n");
-    
+
     zona->semanas[semana].numDias = 0; // Reiniciar contador de días
-    
+    int cancelado = 0;
+
     for (int d = 0; d < MAX_DIAS_SEMANA; d++) {
         printf("--- DIA %d ---\n", d+1);
-        
+
         // Manejo de fechas
         if (config->usar_fechas_automaticas) {
             int dia_relativo = (semana * MAX_DIAS_SEMANA) + d;
@@ -975,29 +978,33 @@ void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct Configura
         } else {
             char fecha_temp[12];
             leerCadenaSegura("Fecha (YYYY-MM-DD): ", fecha_temp, 11);
-            
+
             if (fecha_temp[0] == 'c' || fecha_temp[0] == 'C') {
                 printf("Ingreso cancelado.\n");
-                return;
+                cancelado = 1;
+                break;
             }
-            
+
             strncpy(zona->semanas[semana].dias[d].fecha, fecha_temp, 11);
             zona->semanas[semana].dias[d].fecha[10] = '\0';
         }
-        
+
         // Ingreso de contaminantes con validación mejorada
         char entrada[32];
         float valor;
-        
+
         // CO2
+        int dia_cancelado = 0;
         while (1) {
             leerCadenaSegura("CO2 en ppm (0.0-1.0) o 'c' para cancelar: ", entrada, 31);
-            
+
             if (entrada[0] == 'c' || entrada[0] == 'C') {
                 printf("Ingreso cancelado.\n");
-                return;
+                cancelado = 1;
+                dia_cancelado = 1;
+                break;
             }
-            
+
             if (validarEntradaNumerica(entrada, &valor, 0.0f, 1.0f)) {
                 zona->semanas[semana].dias[d].co2 = valor;
                 break;
@@ -1005,16 +1012,19 @@ void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct Configura
                 printf("Error: Valor invalido. Debe estar entre 0.0 y 1.0\n");
             }
         }
-        
+        if (dia_cancelado) break;
+
         // SO2
         while (1) {
             leerCadenaSegura("SO2 en ug/m3 (0.0-100.0) o 'c' para cancelar: ", entrada, 31);
-            
+
             if (entrada[0] == 'c' || entrada[0] == 'C') {
                 printf("Ingreso cancelado.\n");
-                return;
+                cancelado = 1;
+                dia_cancelado = 1;
+                break;
             }
-            
+
             if (validarEntradaNumerica(entrada, &valor, 0.0f, 100.0f)) {
                 zona->semanas[semana].dias[d].so2 = valor;
                 break;
@@ -1022,16 +1032,19 @@ void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct Configura
                 printf("Error: Valor invalido. Debe estar entre 0.0 y 100.0\n");
             }
         }
-        
+        if (dia_cancelado) break;
+
         // NO2
         while (1) {
             leerCadenaSegura("NO2 en ug/m3 (0.0-300.0) o 'c' para cancelar: ", entrada, 31);
-            
+
             if (entrada[0] == 'c' || entrada[0] == 'C') {
                 printf("Ingreso cancelado.\n");
-                return;
+                cancelado = 1;
+                dia_cancelado = 1;
+                break;
             }
-            
+
             if (validarEntradaNumerica(entrada, &valor, 0.0f, 300.0f)) {
                 zona->semanas[semana].dias[d].no2 = valor;
                 break;
@@ -1039,16 +1052,19 @@ void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct Configura
                 printf("Error: Valor invalido. Debe estar entre 0.0 y 300.0\n");
             }
         }
-        
+        if (dia_cancelado) break;
+
         // PM2.5
         while (1) {
             leerCadenaSegura("PM2.5 en ug/m3 (0.0-500.0) o 'c' para cancelar: ", entrada, 31);
-            
+
             if (entrada[0] == 'c' || entrada[0] == 'C') {
                 printf("Ingreso cancelado.\n");
-                return;
+                cancelado = 1;
+                dia_cancelado = 1;
+                break;
             }
-            
+
             if (validarEntradaNumerica(entrada, &valor, 0.0f, 500.0f)) {
                 zona->semanas[semana].dias[d].pm25 = valor;
                 break;
@@ -1056,17 +1072,26 @@ void ingresarDatosManualMejorado(struct Zona *zona, int semana, struct Configura
                 printf("Error: Valor invalido. Debe estar entre 0.0 y 500.0\n");
             }
         }
-        
+        if (dia_cancelado) break;
+
+        // Solo si NO se canceló el día, se incrementa numDias
         zona->semanas[semana].numDias = d + 1;
         printf("Dia %d registrado correctamente.\n\n", d+1);
     }
-    
+
     // Actualizar el número de semanas si es necesario
     if (semana >= zona->numSemanas) {
         zona->numSemanas = semana + 1;
     }
-    
-    printf("Semana %d completada para la zona %s.\n", semana+1, zona->nombre);
+
+    // Guardar los datos ingresados hasta el momento, aunque se haya cancelado
+    guardarSemana(zona, semana);
+
+    if (!cancelado && zona->semanas[semana].numDias == MAX_DIAS_SEMANA) {
+        printf("Semana %d completada para la zona %s.\n", semana+1, zona->nombre);
+    } else if (cancelado && zona->semanas[semana].numDias > 0) {
+        printf("Datos de la semana %d guardados hasta el día %d para la zona %s.\n", semana+1, zona->semanas[semana].numDias, zona->nombre);
+    }
 }
 
 /**
@@ -1101,6 +1126,7 @@ void ingresarDatosManualMes(struct Zona *zona, int numero_mes, struct Configurac
     }
     
     zona->meses[numero_mes].numDias = 0; // Reiniciar contador de días
+    int cancelado = 0;
     
     for (int d = 0; d < max_dias; d++) {
         printf("--- DIA %d ---\n", d+1);
@@ -1116,7 +1142,8 @@ void ingresarDatosManualMes(struct Zona *zona, int numero_mes, struct Configurac
             
             if (fecha_temp[0] == 'c' || fecha_temp[0] == 'C') {
                 printf("Ingreso cancelado.\n");
-                return;
+                cancelado = 1;
+                break;
             }
             
             strncpy(zona->meses[numero_mes].dias[d].fecha, fecha_temp, 11);
@@ -1133,7 +1160,8 @@ void ingresarDatosManualMes(struct Zona *zona, int numero_mes, struct Configurac
             
             if (entrada[0] == 'c' || entrada[0] == 'C') {
                 printf("Ingreso cancelado.\n");
-                return;
+                cancelado = 1;
+                break;
             }
             
             if (validarEntradaNumerica(entrada, &valor, 0.0f, 1.0f)) {
@@ -1143,6 +1171,7 @@ void ingresarDatosManualMes(struct Zona *zona, int numero_mes, struct Configurac
                 printf("Error: Valor invalido. Debe estar entre 0.0 y 1.0\n");
             }
         }
+        if (cancelado) break;
         
         // SO2
         while (1) {
@@ -1150,7 +1179,8 @@ void ingresarDatosManualMes(struct Zona *zona, int numero_mes, struct Configurac
             
             if (entrada[0] == 'c' || entrada[0] == 'C') {
                 printf("Ingreso cancelado.\n");
-                return;
+                cancelado = 1;
+                break;
             }
             
             if (validarEntradaNumerica(entrada, &valor, 0.0f, 100.0f)) {
@@ -1160,6 +1190,7 @@ void ingresarDatosManualMes(struct Zona *zona, int numero_mes, struct Configurac
                 printf("Error: Valor invalido. Debe estar entre 0.0 y 100.0\n");
             }
         }
+        if (cancelado) break;
         
         // NO2
         while (1) {
@@ -1167,7 +1198,8 @@ void ingresarDatosManualMes(struct Zona *zona, int numero_mes, struct Configurac
             
             if (entrada[0] == 'c' || entrada[0] == 'C') {
                 printf("Ingreso cancelado.\n");
-                return;
+                cancelado = 1;
+                break;
             }
             
             if (validarEntradaNumerica(entrada, &valor, 0.0f, 300.0f)) {
@@ -1177,6 +1209,7 @@ void ingresarDatosManualMes(struct Zona *zona, int numero_mes, struct Configurac
                 printf("Error: Valor invalido. Debe estar entre 0.0 y 300.0\n");
             }
         }
+        if (cancelado) break;
         
         // PM2.5
         while (1) {
@@ -1184,7 +1217,8 @@ void ingresarDatosManualMes(struct Zona *zona, int numero_mes, struct Configurac
             
             if (entrada[0] == 'c' || entrada[0] == 'C') {
                 printf("Ingreso cancelado.\n");
-                return;
+                cancelado = 1;
+                break;
             }
             
             if (validarEntradaNumerica(entrada, &valor, 0.0f, 500.0f)) {
@@ -1194,6 +1228,7 @@ void ingresarDatosManualMes(struct Zona *zona, int numero_mes, struct Configurac
                 printf("Error: Valor invalido. Debe estar entre 0.0 y 500.0\n");
             }
         }
+        if (cancelado) break;
         
         zona->meses[numero_mes].numDias = d + 1;
         printf("Dia %d registrado correctamente.\n\n", d+1);
@@ -1204,10 +1239,13 @@ void ingresarDatosManualMes(struct Zona *zona, int numero_mes, struct Configurac
         zona->numMeses = numero_mes + 1;
     }
     
-    printf("Mes %d completado para la zona %s.\n", numero_mes+1, zona->nombre);
-    
-    // Guardar automáticamente el mes completado
-    guardarMes(zona, numero_mes);
+    if (!cancelado && zona->meses[numero_mes].numDias == max_dias) {
+        printf("Mes %d completado para la zona %s.\n", numero_mes+1, zona->nombre);
+        // Guardar automáticamente el mes completado
+        guardarMes(zona, numero_mes);
+    } else if (cancelado && zona->meses[numero_mes].numDias > 0) {
+        printf("Datos del mes %d guardados hasta el día %d para la zona %s.\n", numero_mes+1, zona->meses[numero_mes].numDias, zona->nombre);
+    }
 }
 
 /**

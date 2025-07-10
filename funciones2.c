@@ -655,12 +655,11 @@ void menuPronosticos(struct Zona zonas[], int numZonas, int mesActual[]) {
         printf("| %s+ 1. Pronostico predictivo por zona    %s |\n", VERDE, RESET CIAN);
         printf("| %s+ 2. Pronostico general multicapa      %s |\n", AZUL, RESET CIAN);
         printf("| %s! 3. Prediccion de alertas PM2.5       %s |\n", AMARILLO, RESET CIAN);
-        printf("| %s^ 4. Analisis de tendencias futuras    %s |\n", MAGENTA, RESET CIAN);
-        printf("| %s< 5. Volver al menu principal          %s |\n", ROJO, RESET CIAN);
+        printf("| %s< 4. Volver al menu principal          %s |\n", ROJO, RESET CIAN);
         printf("+============================================+\n" RESET);
         printf(AMARILLO "> Los pronosticos predicen valores futuros basados en datos historicos\n" RESET);
         
-        int opcion = leerEnteroSeguro("Seleccione opcion: ", 1, 5);
+        int opcion = leerEnteroSeguro("Seleccione opcion: ", 1, 4);
         
         if (opcion == 1) {
             // Pronostico por zona
@@ -683,10 +682,6 @@ void menuPronosticos(struct Zona zonas[], int numZonas, int mesActual[]) {
             predecirAlertasPM25(zonas, numZonas, mesActual);
             
         } else if (opcion == 4) {
-            // Tendencias
-            mostrarTendenciasContaminacion(zonas, numZonas, mesActual);
-            
-        } else if (opcion == 5) {
             break;
         }
     }
@@ -1535,14 +1530,100 @@ void verificarYCrearMesesNecesarios(struct Zona zonas[], int numZonas, int mesDe
 // --- Funciones de prediccion (sin implementar) ---
 void predecirAlertasPM25(struct Zona zonas[], int numZonas, int mesActual[]) {
     printf("\n+----------------------------------------------------------+\n");
-    printf("|   Funcion de prediccion de alertas PM2.5 no implementada |\n");
+    printf("|   Prediccion de alertas PM2.5                           |\n");
     printf("+----------------------------------------------------------+\n");
+
+    for (int i = 0; i < numZonas; i++) {
+        int mes_ultimo = zonas[i].numMeses - 1;
+        if (mes_ultimo < 0) mes_ultimo = 0;
+        float suma_pm25 = 0;
+        int numero_dias = zonas[i].meses[mes_ultimo].numDias;
+        if (numero_dias == 0) continue;
+
+        for (int d = 0; d < numero_dias; d++) {
+            suma_pm25 += zonas[i].meses[mes_ultimo].dias[d].pm25;
+        }
+
+        float promedio_pm25 = suma_pm25 / numero_dias;
+        const char *alerta = "Bueno";
+        const char *color = VERDE;
+
+        if (promedio_pm25 > 75) {
+            alerta = "Peligroso";
+            color = ROJO;
+        } else if (promedio_pm25 > 35) {
+            alerta = "Moderado";
+            color = AMARILLO;
+        } else if (promedio_pm25 > 12) {
+            alerta = "Alto";
+            color = MAGENTA;
+        }
+
+        printf("Zona: %s | PM2.5 Promedio: %.2f | Alerta: %s%s%s\n", 
+               zonas[i].nombre, promedio_pm25, color, alerta, RESET);
+    }
 }
 
 void mostrarTendenciasContaminacion(struct Zona zonas[], int numZonas, int mesActual[]) {
     printf("\n+----------------------------------------------------------+\n");
-    printf("|   Funcion de tendencias de contaminacion no implementada  |\n");
+    printf("|   Analisis de tendencias de contaminacion               |\n");
     printf("+----------------------------------------------------------+\n");
+
+    for (int i = 0; i < numZonas; i++) {
+        printf("\nZona: %s\n", zonas[i].nombre);
+
+        int total_meses = zonas[i].numMeses;
+        if (total_meses < 2) {
+            printf("Datos insuficientes para un análisis completo.\n");
+            if (total_meses == 1 && zonas[i].meses[0].numDias > 0) {
+                float suma_pm25 = 0;
+                for (int d = 0; d < zonas[i].meses[0].numDias; d++) {
+                    suma_pm25 += zonas[i].meses[0].dias[d].pm25;
+                }
+                float promedio_pm25 = suma_pm25 / zonas[i].meses[0].numDias;
+                printf("Promedio PM2.5 del único mes disponible: %.2f\n", promedio_pm25);
+            }
+            continue;
+        }
+
+        // Variables para regresión lineal
+        float sum_x = 0, sum_y = 0, sum_xy = 0, sum_x2 = 0;
+        int n = 0;
+
+        for (int mes = 0; mes < total_meses; mes++) {
+            if (zonas[i].meses[mes].numDias == 0) continue;
+
+            float suma_pm25 = 0;
+            for (int d = 0; d < zonas[i].meses[mes].numDias; d++) {
+                suma_pm25 += zonas[i].meses[mes].dias[d].pm25;
+            }
+
+            float promedio_pm25 = suma_pm25 / zonas[i].meses[mes].numDias;
+
+            // Usar el índice del mes como "x" y el promedio de PM2.5 como "y"
+            sum_x += mes;
+            sum_y += promedio_pm25;
+            sum_xy += mes * promedio_pm25;
+            sum_x2 += mes * mes;
+            n++;
+        }
+
+        if (n < 2) {
+            printf("No hay suficientes datos válidos para analizar tendencias.\n");
+            continue;
+        }
+
+        // Calcular pendiente (m) de la regresión lineal: m = (n*sum_xy - sum_x*sum_y) / (n*sum_x2 - sum_x^2)
+        float pendiente = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
+
+        if (pendiente > 0) {
+            printf("Tendencia: Aumento en PM2.5 (pendiente: %.2f)\n", pendiente);
+        } else if (pendiente < 0) {
+            printf("Tendencia: Disminucion en PM2.5 (pendiente: %.2f)\n", pendiente);
+        } else {
+            printf("Tendencia: Estabilidad en PM2.5\n");
+        }
+    }
 }
 
 void mostrarAlertasYRecomendaciones(struct Zona zonas[], int numZonas) {
@@ -1550,7 +1631,7 @@ void mostrarAlertasYRecomendaciones(struct Zona zonas[], int numZonas) {
     printf("| N  | Zona               | Alerta PM2.5        | Recomendacion               |\n");
     printf("+----+--------------------+---------------------+-----------------------------+\n");
     for (int i = 0; i < numZonas; i++) {
-        int mes_ultimo = zonas[i].numMeses-1;
+        int mes_ultimo = zonas[i].numMeses - 1;
         if (mes_ultimo < 0) mes_ultimo = 0;
         float suma_pm25 = 0;
         int numero_dias = zonas[i].meses[mes_ultimo].numDias;
@@ -1558,20 +1639,29 @@ void mostrarAlertasYRecomendaciones(struct Zona zonas[], int numZonas) {
         for (int d = 0; d < numero_dias; d++) {
             suma_pm25 += zonas[i].meses[mes_ultimo].dias[d].pm25;
         }
-        float prom_pm25 = suma_pm25/numero_dias;
-        const char* color = VERDE;
-        const char* alerta = "Bueno";
-        const char* recomendacion = "Sin restricciones. Aire limpio.";
-        if (prom_pm25 > 75) { color = ROJO; alerta = "Peligroso"; recomendacion = "Evite salir. Riesgo alto para salud."; }
-        else if (prom_pm25 > 35) { color = AMARILLO; alerta = "Moderado"; recomendacion = "Limite ejercicio y actividades al aire libre."; }
-        else if (prom_pm25 > 12) { color = MAGENTA; alerta = "Alto"; recomendacion = "Personas sensibles deben evitar exposicion prolongada."; }
-        printf("| %-2d | %-18s | %s%-19s%s | %-27s |\n", i+1, zonas[i].nombre, color, alerta, RESET, recomendacion);
+        float prom_pm25 = suma_pm25 / numero_dias;
+        const char *color = VERDE;
+        const char *alerta = "Bueno";
+        const char *recomendacion = "Sin restricciones. Aire limpio.";
+        if (prom_pm25 > 75) {
+            color = ROJO;
+            alerta = "Peligroso";
+            recomendacion = "Evite salir. Riesgo alto para salud.";
+        } else if (prom_pm25 > 35) {
+            color = AMARILLO;
+            alerta = "Moderado";
+            recomendacion = "Limite ejercicio y actividades al aire libre.";
+        } else if (prom_pm25 > 12) {
+            color = MAGENTA;
+            alerta = "Alto";
+            recomendacion = "Personas sensibles deben evitar exposicion prolongada.";
+        }
+        printf("| %-2d | %-18s | %s%-19s%s | %-27s |\n", i + 1, zonas[i].nombre, color, alerta, RESET, recomendacion);
     }
     printf("+----+--------------------+---------------------+-----------------------------+\n");
 }
 
 void exportarReporteTabla(struct Zona zonas[], int numZonas) {
-    // Crear carpeta si no existe (compatible Windows y Linux)
     #ifdef _WIN32
         _mkdir("reportes");
         _mkdir("reportes/exportaciones");
@@ -1579,69 +1669,50 @@ void exportarReporteTabla(struct Zona zonas[], int numZonas) {
         mkdir("reportes", 0777);
         mkdir("reportes/exportaciones", 0777);
     #endif
-    
-    char nombre[64];
-    int idx = 1;
-    FILE *f = NULL;
-    do {
-        snprintf(nombre, sizeof(nombre), "reportes/exportaciones/tabla_zonas_%d.txt", idx);
-        f = fopen(nombre, "r");
-        if (f) { fclose(f); idx++; }
-    } while (f);
-    f = fopen(nombre, "w");
-    if (!f) { printf(ROJO "No se pudo exportar la tabla.\n" RESET); return; }
-    fprintf(f, "+----+--------------------------+------------+------------+------------+------------+\n");
-    fprintf(f, "| N  | Zona                     | CO2        | SO2        | NO2        | PM2.5      |\n");
-    fprintf(f, "+----+--------------------------+------------+------------+------------+------------+\n");
-    for (int i = 0; i < numZonas; i++) {
-        int mes_ultimo = zonas[i].numMeses-1;
-        if (mes_ultimo < 0) mes_ultimo = 0;
-        float suma_co2=0, suma_so2=0, suma_no2=0, suma_pm25=0;
-        int numero_dias = zonas[i].meses[mes_ultimo].numDias;
-        if (numero_dias == 0) numero_dias = 1;
-        for (int d = 0; d < numero_dias; d++) {
-            struct DatosAmbientales *datos_dia = &zonas[i].meses[mes_ultimo].dias[d];
-            suma_co2 += datos_dia->co2;
-            suma_so2 += datos_dia->so2;
-            suma_no2 += datos_dia->no2;
-            suma_pm25 += datos_dia->pm25;
-        }
-        float prom_co2 = suma_co2/numero_dias;
-        float prom_so2 = suma_so2/numero_dias;
-        float prom_no2 = suma_no2/numero_dias;
-        float prom_pm25 = suma_pm25/numero_dias;
-        fprintf(f, "| %-2d | %-24s | %10.1f | %10.1f | %10.1f | %10.1f |\n", i+1, zonas[i].nombre, prom_co2, prom_so2, prom_no2, prom_pm25);
-    }
-    fprintf(f, "+----+--------------------------+------------+------------+------------+------------+\n");
-    fclose(f);
-    printf(VERDE "Tabla exportada como %s\n" RESET, nombre);
-}
 
-void exportarAlertasYRecomendaciones(struct Zona zonas[], int numZonas) {
-    // Crear carpeta si no existe (compatible Windows y Linux)
-    #ifdef _WIN32
-        _mkdir("reportes");
-        _mkdir("reportes/exportaciones");
-    #else
-        mkdir("reportes", 0777);
-        mkdir("reportes/exportaciones", 0777);
-    #endif
-    
-    char nombre[64];
-    int idx = 1;
-    FILE *f = NULL;
-    do {
-        snprintf(nombre, sizeof(nombre), "reportes/exportaciones/alertas_recomendaciones_%d.txt", idx);
-        f = fopen(nombre, "r");
-        if (f) { fclose(f); idx++; }
-    } while (f);
-    f = fopen(nombre, "w");
-    if (!f) { printf(ROJO "No se pudo exportar alertas.\n" RESET); return; }
-    fprintf(f, "+----+--------------------+---------------------+-----------------------------+\n");
-    fprintf(f, "| N  | Zona               | Alerta PM2.5        | Recomendacion               |\n");
-    fprintf(f, "+----+--------------------+---------------------+-----------------------------+\n");
+    // Obtener la hora actual
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+
+    // Crear nombre de archivo con marca de tiempo
+    char nombre_archivo[128];
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "reportes/exportaciones/tabla_zonas_%04d%02d%02d_%02d%02d%02d.txt",
+             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+    FILE *archivo = fopen(nombre_archivo, "w");
+    if (!archivo) {
+        printf(ROJO "Error al crear el archivo de reporte." RESET "\n");
+        return;
+    }
+
+    // Encabezado del informe
+    fprintf(archivo, "INFORME DE TABLA DE ZONAS\n");
+    fprintf(archivo, "Fecha de generación: %04d-%02d-%02d %02d:%02d:%02d\n\n",
+            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+    // Resumen de datos
+    fprintf(archivo, "Resumen:\n");
+    fprintf(archivo, "- Total de zonas analizadas: %d\n", numZonas);
+
+    float suma_general_pm25 = 0;
+    int total_dias = 0;
     for (int i = 0; i < numZonas; i++) {
-        int mes_ultimo = zonas[i].numMeses-1;
+        int mes_ultimo = zonas[i].numMeses - 1;
+        if (mes_ultimo < 0) mes_ultimo = 0;
+        for (int d = 0; d < zonas[i].meses[mes_ultimo].numDias; d++) {
+            suma_general_pm25 += zonas[i].meses[mes_ultimo].dias[d].pm25;
+            total_dias++;
+        }
+    }
+    float promedio_general_pm25 = (total_dias > 0) ? suma_general_pm25 / total_dias : 0;
+    fprintf(archivo, "- Promedio general de PM2.5: %.2f\n\n", promedio_general_pm25);
+
+    // Detalles por zona
+    fprintf(archivo, "+----+--------------------+---------------------+-----------------------------+\n");
+    fprintf(archivo, "| N  | Zona               | Alerta PM2.5        | Recomendacion               |\n");
+    fprintf(archivo, "+----+--------------------+---------------------+-----------------------------+\n");
+    for (int i = 0; i < numZonas; i++) {
+        int mes_ultimo = zonas[i].numMeses - 1;
         if (mes_ultimo < 0) mes_ultimo = 0;
         float suma_pm25 = 0;
         int numero_dias = zonas[i].meses[mes_ultimo].numDias;
@@ -1649,16 +1720,85 @@ void exportarAlertasYRecomendaciones(struct Zona zonas[], int numZonas) {
         for (int d = 0; d < numero_dias; d++) {
             suma_pm25 += zonas[i].meses[mes_ultimo].dias[d].pm25;
         }
-        float prom_pm25 = suma_pm25/numero_dias;
-        const char* color = VERDE;
-        const char* alerta = "Bueno";
-        const char* recomendacion = "Sin restricciones. Aire limpio.";
-        if (prom_pm25 > 75) { alerta = "Peligroso"; recomendacion = "Evite salir. Riesgo alto para salud."; }
-        else if (prom_pm25 > 35) { alerta = "Moderado"; recomendacion = "Limite ejercicio y actividades al aire libre."; }
-        else if (prom_pm25 > 12) { alerta = "Alto"; recomendacion = "Personas sensibles deben evitar exposicion prolongada."; }
-        fprintf(f, "| %-2d | %-18s | %-19s | %-27s |\n", i+1, zonas[i].nombre, alerta, recomendacion);
+        float prom_pm25 = suma_pm25 / numero_dias;
+        const char *alerta = "Bueno";
+        const char *recomendacion = "Sin restricciones. Aire limpio.";
+        if (prom_pm25 > 75) {
+            alerta = "Peligroso";
+            recomendacion = "Evite salir. Riesgo alto para salud.";
+        } else if (prom_pm25 > 35) {
+            alerta = "Moderado";
+            recomendacion = "Limite ejercicio y actividades al aire libre.";
+        } else if (prom_pm25 > 12) {
+            alerta = "Alto";
+            recomendacion = "Personas sensibles deben evitar exposicion prolongada.";
+        }
+        fprintf(archivo, "| %-2d | %-18s | %-19s | %-27s |\n", i + 1, zonas[i].nombre, alerta, recomendacion);
     }
-    fprintf(f, "+----+--------------------+---------------------+-----------------------------+\n");
-    fclose(f);
-    printf(VERDE "Alertas exportadas como %s\n" RESET, nombre);
+    fprintf(archivo, "+----+--------------------+---------------------+-----------------------------+\n");
+    fclose(archivo);
+    printf(VERDE "Reporte exportado exitosamente a '%s'." RESET "\n", nombre_archivo);
+}
+
+void exportarAlertasYRecomendaciones(struct Zona zonas[], int numZonas) {
+    #ifdef _WIN32
+        _mkdir("reportes");
+        _mkdir("reportes/exportaciones");
+    #else
+        mkdir("reportes", 0777);
+        mkdir("reportes/exportaciones", 0777);
+    #endif
+
+    // Obtener la hora actual
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+
+    // Crear nombre de archivo con marca de tiempo
+    char nombre_archivo[128];
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "reportes/exportaciones/alertas_recomendaciones_%04d%02d%02d_%02d%02d%02d.txt",
+             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+    FILE *archivo = fopen(nombre_archivo, "w");
+    if (!archivo) {
+        printf(ROJO "Error al crear el archivo de alertas y recomendaciones." RESET "\n");
+        return;
+    }
+
+    // Encabezado del informe
+    fprintf(archivo, "INFORME DE ALERTAS Y RECOMENDACIONES\n");
+    fprintf(archivo, "Fecha de generación: %04d-%02d-%02d %02d:%02d:%02d\n\n",
+            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+    // Resumen de datos
+    fprintf(archivo, "Resumen:\n");
+    fprintf(archivo, "- Total de zonas analizadas: %d\n\n", numZonas);
+
+    // Detalles por zona
+    for (int i = 0; i < numZonas; i++) {
+        int mes_ultimo = zonas[i].numMeses - 1;
+        if (mes_ultimo < 0) mes_ultimo = 0;
+        float suma_pm25 = 0;
+        int numero_dias = zonas[i].meses[mes_ultimo].numDias;
+        if (numero_dias == 0) numero_dias = 1;
+        for (int d = 0; d < numero_dias; d++) {
+            suma_pm25 += zonas[i].meses[mes_ultimo].dias[d].pm25;
+        }
+        float prom_pm25 = suma_pm25 / numero_dias;
+        const char *alerta = "Bueno";
+        const char *recomendacion = "Sin restricciones. Aire limpio.";
+        if (prom_pm25 > 75) {
+            alerta = "Peligroso";
+            recomendacion = "Evite salir. Riesgo alto para salud.";
+        } else if (prom_pm25 > 35) {
+            alerta = "Moderado";
+            recomendacion = "Limite ejercicio y actividades al aire libre.";
+        } else if (prom_pm25 > 12) {
+            alerta = "Alto";
+            recomendacion = "Personas sensibles deben evitar exposicion prolongada.";
+        }
+        fprintf(archivo, "Zona: %s\nPromedio PM2.5: %.2f\nAlerta: %s\nRecomendacion: %s\n\n",
+                zonas[i].nombre, prom_pm25, alerta, recomendacion);
+    }
+    fclose(archivo);
+    printf(VERDE "Alertas y recomendaciones exportadas exitosamente a '%s'." RESET "\n", nombre_archivo);
 }
